@@ -56,6 +56,8 @@ public class SecurityConfig {
 					.requestMatchers(HttpMethod.PUT, "/api/bookings/*/cancel").authenticated()
 					.requestMatchers(HttpMethod.PUT, "/api/users/me").authenticated()
 					.requestMatchers(HttpMethod.POST, "/api/payments").authenticated()
+					.requestMatchers(HttpMethod.GET, "/api/stats/host").hasAnyAuthority("ROLE_HOST", "ROLE_ADMIN")
+					.requestMatchers(HttpMethod.GET, "/api/stats/admin").hasAuthority("ROLE_ADMIN")
 					.requestMatchers("/api/dashboard/**").hasAuthority("ROLE_ADMIN")
 					.anyRequest().authenticated()
 			)

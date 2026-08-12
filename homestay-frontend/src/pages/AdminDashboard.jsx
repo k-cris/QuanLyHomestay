@@ -54,10 +54,17 @@ const AdminDashboard = () => {
 
   return (
     <div className="container" style={{ padding: '40px 0' }}>
-      <h1>Admin Dashboard</h1>
-      <p style={{ color: 'var(--color-text-light)', marginBottom: '24px' }}>
-        Danh sách hồ sơ xin trở thành Chủ Homestay — mở chi tiết để xem xét rồi duyệt/từ chối
-      </p>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 16, flexWrap: 'wrap', marginBottom: '8px' }}>
+        <div>
+          <h1 style={{ margin: 0 }}>Admin Dashboard</h1>
+          <p style={{ color: 'var(--color-text-light)', marginBottom: 0, marginTop: 8 }}>
+            Danh sách hồ sơ xin trở thành Chủ Homestay — mở chi tiết để xem xét rồi duyệt/từ chối
+          </p>
+        </div>
+        <Link to="/admin/stats" className="btn btn-outline" style={{ padding: '10px 16px' }}>
+          Thống kê doanh thu
+        </Link>
+      </div>
 
       {message.text && (
         <div style={{

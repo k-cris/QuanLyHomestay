@@ -56,9 +56,14 @@ const Navbar = () => {
 
         <div className="navbar-user">
           {user && user.role === 'ADMIN' && (
-            <Link to="/admin" className="nav-text-hidden-mobile" style={{ fontWeight: 600, fontSize: '0.875rem', cursor: 'pointer', marginRight: '16px', color: 'var(--color-primary)' }}>
-              Trang Admin
-            </Link>
+            <>
+              <Link to="/admin" className="nav-text-hidden-mobile" style={{ fontWeight: 600, fontSize: '0.875rem', cursor: 'pointer', marginRight: '16px', color: 'var(--color-primary)' }}>
+                Trang Admin
+              </Link>
+              <Link to="/admin/stats" className="nav-text-hidden-mobile" style={{ fontWeight: 600, fontSize: '0.875rem', cursor: 'pointer', marginRight: '16px', color: 'var(--color-primary)' }}>
+                Thống kê
+              </Link>
+            </>
           )}
           {user && user.role === 'HOST' && (
             <>
@@ -67,6 +72,9 @@ const Navbar = () => {
               </Link>
               <Link to="/host/bookings" className="nav-text-hidden-mobile" style={{ fontWeight: 600, fontSize: '0.875rem', cursor: 'pointer', marginRight: '16px', color: 'var(--color-primary)' }}>
                 Đơn đặt phòng
+              </Link>
+              <Link to="/host/stats" className="nav-text-hidden-mobile" style={{ fontWeight: 600, fontSize: '0.875rem', cursor: 'pointer', marginRight: '16px', color: 'var(--color-primary)' }}>
+                Thống kê
               </Link>
             </>
           )}

@@ -159,6 +159,9 @@ const HostDashboard = () => {
           <Link to="/host/bookings" className="btn btn-outline" style={{ padding: '10px 16px' }}>
             Đơn đặt phòng
           </Link>
+          <Link to="/host/stats" className="btn btn-outline" style={{ padding: '10px 16px' }}>
+            Thống kê
+          </Link>
           <button className="btn btn-primary" onClick={() => handleOpenModal()} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             <Plus size={18} /> Thêm Homestay
           </button>

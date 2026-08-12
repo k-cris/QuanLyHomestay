@@ -79,3 +79,8 @@ export const hostRequestService = {
 export const amenityService = {
   getAll: () => api.get('/amenities')
 };
+
+export const statsService = {
+  host: (params) => api.get('/stats/host', { params }),
+  admin: (params) => api.get('/stats/admin', { params })
+};
