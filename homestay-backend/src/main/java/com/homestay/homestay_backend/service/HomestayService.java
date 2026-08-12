@@ -1,17 +1,24 @@
 package com.homestay.homestay_backend.service;
 
+import com.homestay.homestay_backend.entity.Amenity;
 import com.homestay.homestay_backend.entity.Homestay;
+import com.homestay.homestay_backend.repository.AmenityRepository;
 import com.homestay.homestay_backend.repository.BookingRepository;
 import com.homestay.homestay_backend.repository.HomestayRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.ArrayList;
+import java.util.List;
+import java.util.stream.Collectors;
+
 @Service
 @RequiredArgsConstructor
 public class HomestayService {
     private final HomestayRepository homestayRepository;
     private final BookingRepository bookingRepository;
+    private final AmenityRepository amenityRepository;
 
     // Business Rule 4: Host không được xóa Homestay đang có đơn PENDING/CONFIRM
     @Transactional
@@ -63,13 +70,28 @@ public class HomestayService {
             .collect(java.util.stream.Collectors.toList());
     }
     
+    @Transactional(readOnly = true)
     public Homestay getHomestayById(Long id) {
-        return homestayRepository.findById(id).orElseThrow(() -> new RuntimeException("Homestay not found"));
+        Homestay homestay = homestayRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Homestay not found"));
+        // Touch lazy collections for detail page
+        if (homestay.getAmenities() != null) {
+            homestay.getAmenities().size();
+        }
+        if (homestay.getImages() != null) {
+            homestay.getImages().size();
+        }
+        return homestay;
     }
 
+    @Transactional(readOnly = true)
     public java.util.List<Homestay> getHomestaysByHost(Long hostId) {
         return homestayRepository.findAll().stream()
                 .filter(h -> h.getHost().getId().equals(hostId))
+                .peek(h -> {
+                    if (h.getAmenities() != null) h.getAmenities().size();
+                    if (h.getImages() != null) h.getImages().size();
+                })
                 .collect(java.util.stream.Collectors.toList());
     }
 
@@ -84,12 +106,14 @@ public class HomestayService {
         if (homestayData.getImages() != null) {
             homestayData.getImages().forEach(img -> img.setHomestay(homestayData));
         }
+        homestayData.setAmenities(resolveAmenities(homestayData.getAmenities()));
         return homestayRepository.save(homestayData);
     }
 
     @Transactional
     public Homestay updateHomestay(Long hostId, Long homestayId, Homestay updated) {
-        Homestay homestay = homestayRepository.findById(homestayId).orElseThrow(() -> new RuntimeException("Homestay not found"));
+        Homestay homestay = homestayRepository.findById(homestayId)
+                .orElseThrow(() -> new RuntimeException("Homestay not found"));
         if (!homestay.getHost().getId().equals(hostId)) {
             throw new RuntimeException("Unauthorized: Not your homestay");
         }
@@ -99,8 +123,15 @@ public class HomestayService {
         homestay.setCity(updated.getCity());
         homestay.setPricePerNight(updated.getPricePerNight());
         homestay.setMaxGuests(updated.getMaxGuests());
-        // Handle images update (simplified for now: just clear and add new)
+        homestay.setBedrooms(updated.getBedrooms());
+        homestay.setBeds(updated.getBeds());
+        homestay.setBathrooms(updated.getBathrooms());
+        homestay.setAmenities(resolveAmenities(updated.getAmenities()));
+
         if (updated.getImages() != null) {
+            if (homestay.getImages() == null) {
+                homestay.setImages(new ArrayList<>());
+            }
             homestay.getImages().clear();
             updated.getImages().forEach(img -> {
                 img.setHomestay(homestay);
@@ -108,5 +139,16 @@ public class HomestayService {
             });
         }
         return homestayRepository.save(homestay);
+    }
+
+    private List<Amenity> resolveAmenities(List<Amenity> incoming) {
+        if (incoming == null || incoming.isEmpty()) {
+            return new ArrayList<>();
+        }
+        return incoming.stream()
+                .filter(a -> a != null && a.getId() != null)
+                .map(a -> amenityRepository.findById(a.getId())
+                        .orElseThrow(() -> new RuntimeException("Amenity không tồn tại: " + a.getId())))
+                .collect(Collectors.toList());
     }
 }

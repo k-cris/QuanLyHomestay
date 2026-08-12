@@ -59,3 +59,16 @@ export const uploadService = {
     });
   }
 };
+
+export const hostRequestService = {
+  submit: (data) => api.post('/host-requests', data),
+  getMine: () => api.get('/host-requests/me'),
+  getAll: (params) => api.get('/host-requests', { params }),
+  getById: (id) => api.get(`/host-requests/${id}`),
+  approve: (id) => api.put(`/host-requests/${id}/approve`),
+  reject: (id, adminNote) => api.put(`/host-requests/${id}/reject`, { adminNote })
+};
+
+export const amenityService = {
+  getAll: () => api.get('/amenities')
+};

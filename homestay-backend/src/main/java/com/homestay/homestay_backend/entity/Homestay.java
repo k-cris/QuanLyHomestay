@@ -32,6 +32,9 @@ public class Homestay {
     
     private BigDecimal pricePerNight;
     private Integer maxGuests;
+    private Integer bedrooms;
+    private Integer beds;
+    private Integer bathrooms;
 
     @Enumerated(EnumType.STRING)
     private HomestayStatusEnum status;

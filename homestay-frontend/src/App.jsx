@@ -9,6 +9,8 @@ import HomestayDetail from './pages/HomestayDetail';
 import AdminDashboard from './pages/AdminDashboard';
 import HostDashboard from './pages/HostDashboard';
 import MyBookings from './pages/MyBookings';
+import BecomeHost from './pages/BecomeHost';
+import AdminHostRequestDetail from './pages/AdminHostRequestDetail';
 
 const App = () => {
   return (
@@ -21,7 +23,9 @@ const App = () => {
           <Route path="/register" element={<Register />} />
           <Route path="/homestay/:id" element={<HomestayDetail />} />
           <Route path="/my-bookings" element={<MyBookings />} />
+          <Route path="/become-host" element={<BecomeHost />} />
           <Route path="/admin" element={<AdminDashboard />} />
+          <Route path="/admin/host-requests/:id" element={<AdminHostRequestDetail />} />
           <Route path="/host" element={<HostDashboard />} />
         </Routes>
       </Router>

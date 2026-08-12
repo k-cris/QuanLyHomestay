@@ -30,6 +30,17 @@ public class BookingService {
         Homestay homestay = homestayRepository.findById(homestayId)
                 .orElseThrow(() -> new RuntimeException("Homestay not found"));
 
+        LocalDate today = LocalDate.now();
+        if (checkinDate == null || checkoutDate == null) {
+            throw new RuntimeException("Vui lòng chọn ngày nhận và trả phòng");
+        }
+        if (checkinDate.isBefore(today)) {
+            throw new RuntimeException("Ngày nhận phòng phải lớn hơn hoặc bằng ngày hôm nay");
+        }
+        if (!checkoutDate.isAfter(checkinDate)) {
+            throw new RuntimeException("Ngày trả phòng phải sau ngày nhận phòng");
+        }
+
         long overlaps = bookingRepository.countOverlappingBookings(homestayId, checkinDate, checkoutDate);
         if (overlaps > 0) {
             throw new RuntimeException("Date overlap with an existing booking");

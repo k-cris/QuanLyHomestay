@@ -70,9 +70,16 @@ const Navbar = () => {
               Lịch sử đặt phòng
             </Link>
           )}
-          <span className="nav-text-hidden-mobile" style={{ fontWeight: 600, fontSize: '0.875rem', cursor: 'pointer' }}>
-            Đón tiếp khách
-          </span>
+          {user && user.role === 'USER' && (
+            <Link to="/become-host" className="nav-text-hidden-mobile" style={{ fontWeight: 600, fontSize: '0.875rem', cursor: 'pointer', marginRight: '16px', color: 'var(--color-primary)' }}>
+              Đón tiếp khách
+            </Link>
+          )}
+          {!user && (
+            <Link to="/login" className="nav-text-hidden-mobile" style={{ fontWeight: 600, fontSize: '0.875rem', cursor: 'pointer', marginRight: '16px' }}>
+              Đón tiếp khách
+            </Link>
+          )}
           <div className="user-menu-btn">
             <Menu size={18} />
             <UserCircle size={24} color="var(--color-text-light)" />

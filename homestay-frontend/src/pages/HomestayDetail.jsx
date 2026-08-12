@@ -1,15 +1,32 @@
 import React, { useState, useEffect, useContext } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Star, Wifi, Car, Coffee, Tv } from 'lucide-react';
+import {
+  Star, Wifi, Car, Coffee, Tv, Wind, Waves, UtensilsCrossed,
+  WashingMachine, Home, Flame, Ban, CheckCircle2
+} from 'lucide-react';
 import { homestayService, bookingService, paymentService } from '../services/api';
 import { AuthContext } from '../context/AuthContext';
+
+const amenityIconMap = {
+  wifi: Wifi,
+  car: Car,
+  coffee: Coffee,
+  tv: Tv,
+  wind: Wind,
+  waves: Waves,
+  utensils: UtensilsCrossed,
+  'washing-machine': WashingMachine,
+  home: Home,
+  flame: Flame,
+  ban: Ban
+};
 
 const HomestayDetail = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const { user } = useContext(AuthContext);
   const [homestay, setHomestay] = useState(null);
-  
+
   const [checkIn, setCheckIn] = useState('');
   const [checkOut, setCheckOut] = useState('');
   const [guests, setGuests] = useState(1);
@@ -17,13 +34,12 @@ const HomestayDetail = () => {
   const [bookingStatus, setBookingStatus] = useState({ type: '', message: '' });
 
   useEffect(() => {
-    // Mocking data fetch for robust UI display
     const fetchDetail = async () => {
       try {
         const res = await homestayService.getById(id);
         setHomestay(res.data);
       } catch (error) {
-        console.error("Error fetching homestay detail", error);
+        console.error('Error fetching homestay detail', error);
       } finally {
         setLoading(false);
       }
@@ -31,10 +47,18 @@ const HomestayDetail = () => {
     fetchDetail();
   }, [id]);
 
+  const todayStr = (() => {
+    const d = new Date();
+    const yyyy = d.getFullYear();
+    const mm = String(d.getMonth() + 1).padStart(2, '0');
+    const dd = String(d.getDate()).padStart(2, '0');
+    return `${yyyy}-${mm}-${dd}`;
+  })();
+
   const handleBooking = async (e) => {
     e.preventDefault();
     setBookingStatus({ type: '', message: '' });
-    
+
     if (!user) {
       setBookingStatus({ type: 'error', message: 'Bạn cần đăng nhập để đặt phòng!' });
       return;
@@ -43,25 +67,19 @@ const HomestayDetail = () => {
       setBookingStatus({ type: 'error', message: 'Vui lòng chọn ngày nhận và trả phòng' });
       return;
     }
-    
+
+    if (checkIn < todayStr) {
+      setBookingStatus({ type: 'error', message: 'Ngày nhận phòng phải lớn hơn hoặc bằng ngày hôm nay' });
+      return;
+    }
+
     const timeIn = new Date(checkIn).getTime();
     const timeOut = new Date(checkOut).getTime();
-    
+
     if (timeOut <= timeIn) {
       setBookingStatus({ type: 'error', message: 'Ngày trả phòng phải sau ngày nhận phòng' });
       return;
     }
-    
-    const diffDays = Math.ceil((timeOut - timeIn) / (1000 * 60 * 60 * 24));
-
-    const bookingData = {
-      homestayId: homestay.id,
-      guestId: user.id,
-      checkinDate: checkIn,
-      checkoutDate: checkOut,
-      totalGuests: guests,
-      totalPrice: diffDays * homestay.pricePerNight
-    };
 
     try {
       const bookingRes = await bookingService.create({
@@ -70,27 +88,25 @@ const HomestayDetail = () => {
         checkoutDate: checkOut,
         totalGuests: guests
       });
-      
+
       const createdBooking = bookingRes.data;
 
-      // Giả lập luồng thanh toán ngay sau khi tạo đơn thành công
       await paymentService.create({
         bookingId: createdBooking.id,
         paymentMethod: 'BANK_TRANSFER'
       });
 
-      setBookingStatus({ 
-        type: 'success', 
-        message: `Tuyệt vời! Đặt phòng & Thanh toán thành công! Mã đơn: ${createdBooking.bookingCode}` 
+      setBookingStatus({
+        type: 'success',
+        message: `Tuyệt vời! Đặt phòng & Thanh toán thành công! Mã đơn: ${createdBooking.bookingCode}`
       });
-      
-      // Reset form
+
       setCheckIn('');
       setCheckOut('');
     } catch (error) {
-      setBookingStatus({ 
-        type: 'error', 
-        message: "Lỗi: " + (error.response?.data || "Phòng đã có người đặt trong thời gian này. Vui lòng chọn ngày khác!") 
+      setBookingStatus({
+        type: 'error',
+        message: 'Lỗi: ' + (error.response?.data || 'Phòng đã có người đặt trong thời gian này. Vui lòng chọn ngày khác!')
       });
     }
   };
@@ -106,13 +122,16 @@ const HomestayDetail = () => {
     return diffDays > 0 ? diffDays * homestay.pricePerNight : 0;
   };
 
+  const maxGuests = homestay.maxGuests || 1;
+  const amenities = homestay.amenities || [];
+
   return (
     <div className="container detail-page">
       <div className="detail-header">
         <h1>{homestay.title}</h1>
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontWeight: 500, textDecoration: 'underline' }}>
           <Star size={16} fill="var(--color-text-dark)" color="var(--color-text-dark)" />
-          <span>{homestay.averageRating}</span>
+          <span>{homestay.averageRating ?? '—'}</span>
           <span style={{ margin: '0 8px' }}>·</span>
           <span>{homestay.city}</span>
         </div>
@@ -128,35 +147,48 @@ const HomestayDetail = () => {
         <div className="detail-info">
           <div className="detail-section">
             <h2>Toàn bộ căn nhà - Chủ nhà {homestay.host?.fullName || 'Chưa rõ'}</h2>
-            <p style={{ color: 'var(--color-text-light)' }}>Tối đa {homestay.maxGuests} khách · 3 phòng ngủ · 4 giường · 2 phòng tắm</p>
+            <p style={{ color: 'var(--color-text-light)' }}>
+              Tối đa {maxGuests} khách
+              {' · '}{homestay.bedrooms ?? 0} phòng ngủ
+              {' · '}{homestay.beds ?? 0} giường
+              {' · '}{homestay.bathrooms ?? 0} phòng tắm
+            </p>
           </div>
-          
+
           <div className="detail-section">
             <h3 style={{ marginBottom: '16px' }}>Giới thiệu</h3>
             <p>{homestay.description}</p>
           </div>
-          
+
           <div className="detail-section">
             <h3 style={{ marginBottom: '16px' }}>Tiện nghi cung cấp</h3>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
-              <div style={{ display: 'flex', gap: '16px', alignItems: 'center' }}><Wifi /> Wifi tốc độ cao</div>
-              <div style={{ display: 'flex', gap: '16px', alignItems: 'center' }}><Car /> Bãi đỗ xe miễn phí</div>
-              <div style={{ display: 'flex', gap: '16px', alignItems: 'center' }}><Coffee /> Bếp đủ dụng cụ</div>
-              <div style={{ display: 'flex', gap: '16px', alignItems: 'center' }}><Tv /> Smart TV</div>
-            </div>
+            {amenities.length === 0 ? (
+              <p style={{ color: 'var(--color-text-light)' }}>Chủ nhà chưa cập nhật tiện nghi.</p>
+            ) : (
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+                {amenities.map((a) => {
+                  const Icon = amenityIconMap[a.icon] || CheckCircle2;
+                  return (
+                    <div key={a.id} style={{ display: 'flex', gap: '16px', alignItems: 'center' }}>
+                      <Icon size={20} /> {a.name}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
           </div>
         </div>
 
         <div>
           <div className="booking-card">
             <div className="booking-card-price">
-              {homestay.pricePerNight.toLocaleString('vi-VN')} ₫ <span style={{ fontWeight: 400, fontSize: '1rem' }}>/ đêm</span>
+              {Number(homestay.pricePerNight).toLocaleString('vi-VN')} ₫ <span style={{ fontWeight: 400, fontSize: '1rem' }}>/ đêm</span>
             </div>
-            
+
             {bookingStatus.message && (
-              <div style={{ 
-                padding: '12px 16px', 
-                borderRadius: '8px', 
+              <div style={{
+                padding: '12px 16px',
+                borderRadius: '8px',
                 marginBottom: '16px',
                 backgroundColor: bookingStatus.type === 'error' ? '#FFF1F2' : '#F0FDF4',
                 color: bookingStatus.type === 'error' ? '#E11D48' : '#16A34A',
@@ -175,34 +207,42 @@ const HomestayDetail = () => {
             <form onSubmit={handleBooking}>
               <div className="booking-form">
                 <div className="booking-dates">
-                  <input 
-                    type="date" 
-                    className="booking-input" 
+                  <input
+                    type="date"
+                    className="booking-input"
                     value={checkIn}
-                    onChange={(e) => setCheckIn(e.target.value)}
+                    min={todayStr}
+                    onChange={(e) => {
+                      const nextCheckIn = e.target.value;
+                      setCheckIn(nextCheckIn);
+                      if (checkOut && checkOut <= nextCheckIn) {
+                        setCheckOut('');
+                      }
+                    }}
                     required
                   />
-                  <input 
-                    type="date" 
-                    className="booking-input" 
+                  <input
+                    type="date"
+                    className="booking-input"
                     value={checkOut}
+                    min={checkIn || todayStr}
                     onChange={(e) => setCheckOut(e.target.value)}
                     required
                   />
                 </div>
-                <select 
-                  className="booking-guest" 
-                  value={guests} 
+                <select
+                  className="booking-guest"
+                  value={guests}
                   onChange={(e) => setGuests(parseInt(e.target.value))}
                 >
-                  {[...Array(homestay.maxGuests)].map((_, i) => (
+                  {[...Array(maxGuests)].map((_, i) => (
                     <option key={i} value={i + 1}>{i + 1} khách</option>
                   ))}
                 </select>
               </div>
-              
+
               <button type="submit" className="btn btn-primary" style={{ width: '100%' }}>
-                {user ? "Đặt phòng" : "Đăng nhập để đặt phòng"}
+                {user ? 'Đặt phòng' : 'Đăng nhập để đặt phòng'}
               </button>
             </form>
 
