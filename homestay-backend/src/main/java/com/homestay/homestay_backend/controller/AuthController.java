@@ -1,5 +1,6 @@
 package com.homestay.homestay_backend.controller;
 
+import com.homestay.homestay_backend.dto.UserResponseDto;
 import com.homestay.homestay_backend.entity.User;
 import com.homestay.homestay_backend.enums.RoleEnum;
 import com.homestay.homestay_backend.repository.UserRepository;
@@ -41,7 +42,7 @@ public class AuthController {
         String token = jwtUtil.generateToken(user.getEmail(), "ROLE_" + user.getRole().name());
         Map<String, Object> response = new HashMap<>();
         response.put("token", token);
-        response.put("user", user);
+        response.put("user", UserResponseDto.from(user));
         
         return ResponseEntity.ok(response);
     }
@@ -55,6 +56,6 @@ public class AuthController {
         if (user == null) {
             return ResponseEntity.status(404).body("Không tìm thấy người dùng");
         }
-        return ResponseEntity.ok(user);
+        return ResponseEntity.ok(UserResponseDto.from(user));
     }
 }

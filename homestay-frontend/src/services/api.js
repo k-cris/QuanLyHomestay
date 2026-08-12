@@ -34,11 +34,18 @@ export const homestayService = {
 
 export const bookingService = {
   create: (data) => api.post('/bookings', data),
-  getMyBookings: () => api.get('/bookings/me')
+  getMyBookings: () => api.get('/bookings/me'),
+  getHostBookings: (params) => api.get('/bookings/host', { params }),
+  confirm: (id) => api.put(`/bookings/${id}/confirm`),
+  reject: (id) => api.put(`/bookings/${id}/reject`)
 };
 
 export const paymentService = {
   create: (data) => api.post('/payments', data)
+};
+
+export const userService = {
+  updateMe: (data) => api.put('/users/me', data)
 };
 
 export const hostService = {

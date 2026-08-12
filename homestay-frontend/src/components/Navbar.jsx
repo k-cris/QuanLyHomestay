@@ -61,9 +61,14 @@ const Navbar = () => {
             </Link>
           )}
           {user && user.role === 'HOST' && (
-            <Link to="/host" className="nav-text-hidden-mobile" style={{ fontWeight: 600, fontSize: '0.875rem', cursor: 'pointer', marginRight: '16px', color: 'var(--color-primary)' }}>
-              Quản lý phòng
-            </Link>
+            <>
+              <Link to="/host" className="nav-text-hidden-mobile" style={{ fontWeight: 600, fontSize: '0.875rem', cursor: 'pointer', marginRight: '16px', color: 'var(--color-primary)' }}>
+                Quản lý phòng
+              </Link>
+              <Link to="/host/bookings" className="nav-text-hidden-mobile" style={{ fontWeight: 600, fontSize: '0.875rem', cursor: 'pointer', marginRight: '16px', color: 'var(--color-primary)' }}>
+                Đơn đặt phòng
+              </Link>
+            </>
           )}
           {user && (
             <Link to="/my-bookings" className="nav-text-hidden-mobile" style={{ fontWeight: 600, fontSize: '0.875rem', cursor: 'pointer', marginRight: '16px', color: 'var(--color-primary)' }}>
@@ -78,6 +83,11 @@ const Navbar = () => {
           {!user && (
             <Link to="/login" className="nav-text-hidden-mobile" style={{ fontWeight: 600, fontSize: '0.875rem', cursor: 'pointer', marginRight: '16px' }}>
               Đón tiếp khách
+            </Link>
+          )}
+          {user && (
+            <Link to="/profile" className="nav-text-hidden-mobile" style={{ fontWeight: 600, fontSize: '0.875rem', cursor: 'pointer', marginRight: '16px', color: 'var(--color-primary)' }}>
+              Hồ sơ / STK
             </Link>
           )}
           <div className="user-menu-btn">

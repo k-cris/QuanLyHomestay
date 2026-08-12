@@ -1,5 +1,5 @@
 import React, { createContext, useState, useEffect } from 'react';
-import { authService } from '../services/api';
+import { authService, userService } from '../services/api';
 
 export const AuthContext = createContext();
 
@@ -15,7 +15,7 @@ export const AuthProvider = ({ children }) => {
           const res = await authService.getMe();
           setUser(res.data);
         } catch (error) {
-          console.error("Failed to fetch user", error);
+          console.error('Failed to fetch user', error);
           localStorage.removeItem('token');
         }
       }
@@ -42,8 +42,20 @@ export const AuthProvider = ({ children }) => {
     setUser(null);
   };
 
+  const refreshUser = async () => {
+    const res = await authService.getMe();
+    setUser(res.data);
+    return res.data;
+  };
+
+  const updateProfile = async (payload) => {
+    const res = await userService.updateMe(payload);
+    setUser(res.data);
+    return res.data;
+  };
+
   return (
-    <AuthContext.Provider value={{ user, login, register, logout, loading }}>
+    <AuthContext.Provider value={{ user, login, register, logout, loading, refreshUser, updateProfile }}>
       {!loading && children}
     </AuthContext.Provider>
   );

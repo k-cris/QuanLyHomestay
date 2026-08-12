@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import { hostService, uploadService, amenityService } from '../services/api';
 import { Edit, Trash2, Plus, X } from 'lucide-react';
 
@@ -152,11 +153,16 @@ const HostDashboard = () => {
 
   return (
     <div className="container" style={{ padding: '40px 0' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
-        <h1>Quản lý phòng (Host)</h1>
-        <button className="btn btn-primary" onClick={() => handleOpenModal()} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <Plus size={18} /> Thêm Homestay
-        </button>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px', gap: 12, flexWrap: 'wrap' }}>
+        <h1 style={{ margin: 0 }}>Quản lý phòng (Host)</h1>
+        <div style={{ display: 'flex', gap: 8 }}>
+          <Link to="/host/bookings" className="btn btn-outline" style={{ padding: '10px 16px' }}>
+            Đơn đặt phòng
+          </Link>
+          <button className="btn btn-primary" onClick={() => handleOpenModal()} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <Plus size={18} /> Thêm Homestay
+          </button>
+        </div>
       </div>
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>

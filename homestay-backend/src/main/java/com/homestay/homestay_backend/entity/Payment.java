@@ -30,4 +30,17 @@ public class Payment {
     private PaymentStatusEnum status;
 
     private LocalDateTime paidAt;
+
+    /** Snapshot STK chủ nhà nhận tiền lúc thanh toán */
+    private String receiverBankName;
+    private String receiverBankHolder;
+    private String receiverBankAccount;
+
+    /** BR-6: thời điểm hoàn tiền */
+    private LocalDateTime refundedAt;
+
+    /** BR-6: số tài khoản nhận hoàn tiền (của khách) */
+    private String refundBankAccount;
+
+    private String refundNote;
 }

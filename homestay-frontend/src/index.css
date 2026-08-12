@@ -440,3 +440,188 @@ h2 { font-size: 1.5rem; margin-bottom: 0.75rem; }
     grid-template-columns: 1fr;
   }
 }
+
+/* ===== Custom Bank Select (mở xuống, đẩy form, không đè ô bên dưới) ===== */
+.bank-select {
+  position: relative;
+  width: 100%;
+}
+
+.bank-select-trigger {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 14px;
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+  background: #fff;
+  text-align: left;
+  font-size: 1rem;
+  color: var(--color-text-dark);
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.bank-select.is-open .bank-select-trigger,
+.bank-select-trigger:hover {
+  border-color: var(--color-text-dark);
+}
+
+.bank-select.is-open .bank-select-trigger {
+  box-shadow: 0 0 0 3px rgba(34, 34, 34, 0.06);
+}
+
+.bank-select-placeholder {
+  color: var(--color-text-light);
+}
+
+.bank-select-value {
+  font-weight: 500;
+}
+
+.bank-select-chevron {
+  flex-shrink: 0;
+  color: var(--color-text-light);
+  transition: transform 0.22s cubic-bezier(0.2, 0, 0, 1);
+}
+
+.bank-select.is-open .bank-select-chevron {
+  transform: rotate(180deg);
+}
+
+.bank-select-hidden {
+  position: absolute;
+  left: 0;
+  top: 0;
+  opacity: 0;
+  pointer-events: none;
+  height: 1px;
+  width: 1px;
+  border: 0;
+  margin: 0;
+  padding: 0;
+}
+
+.bank-select-panel {
+  position: relative;
+  margin-top: 8px;
+  width: 100%;
+  z-index: 5;
+  background: #fff;
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  box-shadow: var(--shadow-sm);
+  overflow: hidden;
+  animation: bankPanelIn 0.18s cubic-bezier(0.2, 0, 0, 1);
+}
+
+@keyframes bankPanelIn {
+  from {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.bank-select-search {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--color-border);
+  color: var(--color-text-light);
+}
+
+.bank-select-search input {
+  flex: 1;
+  border: none;
+  outline: none;
+  padding: 4px 0;
+  font-size: 0.95rem;
+  background: transparent;
+}
+
+.bank-select-list {
+  list-style: none;
+  margin: 0;
+  padding: 6px;
+  max-height: 220px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.bank-select-option {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  text-align: left;
+  font-size: 0.95rem;
+  color: var(--color-text-dark);
+  transition: background 0.15s ease;
+}
+
+.bank-select-option:hover {
+  background: var(--color-background-alt);
+}
+
+.bank-select-option.is-selected {
+  background: #FFF1F2;
+  color: var(--color-primary);
+  font-weight: 600;
+}
+
+.bank-select-empty {
+  padding: 16px 12px;
+  text-align: center;
+  color: var(--color-text-light);
+  font-size: 0.9rem;
+}
+
+/* ===== Password input với nút hiện/ẩn ===== */
+.password-input {
+  position: relative;
+  width: 100%;
+}
+
+.password-input-field {
+  width: 100%;
+  padding: 12px 44px 12px 12px;
+  border-radius: 8px;
+  border: 1px solid var(--color-border);
+  font-size: 1rem;
+  outline: none;
+  transition: var(--transition);
+  background: #fff;
+}
+
+.password-input-field:focus {
+  border-color: var(--color-text-dark);
+}
+
+.password-input-toggle {
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 6px;
+  color: var(--color-text-light);
+  transition: color 0.15s ease, background 0.15s ease;
+}
+
+.password-input-toggle:hover {
+  color: var(--color-text-dark);
+  background: var(--color-background-alt);
+}

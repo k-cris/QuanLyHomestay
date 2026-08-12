@@ -10,7 +10,7 @@ const MyBookings = () => {
     const fetchBookings = async () => {
       try {
         const res = await bookingService.getMyBookings();
-        setBookings(res.data);
+        setBookings(res.data || []);
       } catch (err) {
         console.error('Lỗi khi tải lịch sử đơn hàng', err);
       } finally {
@@ -31,6 +31,15 @@ const MyBookings = () => {
     }
   };
 
+  const paymentText = (b) => {
+    if (!b.paymentStatus) return 'Chưa thanh toán';
+    if (b.paymentStatus === 'REFUNDED') {
+      return `Đã hoàn tiền${b.refundBankAccount ? ` → ${b.refundBankAccount}` : ''}`;
+    }
+    if (b.paymentStatus === 'PAID') return 'Đã thanh toán';
+    return b.paymentStatus;
+  };
+
   if (loading) return <div className="container" style={{ padding: '40px 0' }}>Đang tải lịch sử đặt phòng...</div>;
 
   return (
@@ -48,8 +57,10 @@ const MyBookings = () => {
             return (
               <div key={b.id} style={{ display: 'flex', gap: '24px', border: '1px solid var(--color-border)', borderRadius: 'var(--radius-md)', padding: '24px', boxShadow: 'var(--shadow-sm)' }}>
                 <div style={{ flex: 1 }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '12px' }}>
-                    <h3 style={{ fontSize: '1.25rem', color: 'var(--color-text-dark)' }}>{b.homestay?.title || 'Homestay'}</h3>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '12px', gap: 12, flexWrap: 'wrap' }}>
+                    <h3 style={{ fontSize: '1.25rem', color: 'var(--color-text-dark)' }}>
+                      {b.homestayTitle || b.homestay?.title || 'Homestay'}
+                    </h3>
                     <span style={{
                       padding: '4px 12px',
                       borderRadius: 'var(--radius-full)',
@@ -62,15 +73,14 @@ const MyBookings = () => {
                     </span>
                   </div>
 
-                  {b.createdAt && (
-                    <div style={{ fontSize: '0.875rem', color: 'var(--color-text-light)', marginBottom: '12px' }}>
-                      Được đặt vào lúc: {new Date(b.createdAt).toLocaleString('vi-VN')}
-                    </div>
-                  )}
+                  <div style={{ fontSize: '0.875rem', color: 'var(--color-text-light)', marginBottom: '12px' }}>
+                    Mã đơn: {b.bookingCode}
+                    {b.createdAt && ` · Đặt lúc ${new Date(b.createdAt).toLocaleString('vi-VN')}`}
+                  </div>
 
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--color-text-light)', marginBottom: '8px' }}>
                     <MapPin size={16} />
-                    <span>{b.homestay?.city || 'Không rõ'}</span>
+                    <span>{b.homestayCity || b.homestay?.city || 'Không rõ'}</span>
                   </div>
 
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--color-text-light)', marginBottom: '16px' }}>
@@ -80,7 +90,12 @@ const MyBookings = () => {
 
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontWeight: 600, color: 'var(--color-text-dark)' }}>
                     <CreditCard size={18} color="var(--color-primary)" />
-                    <span>Tổng tiền: {b.totalPrice?.toLocaleString('vi-VN')} ₫</span>
+                    <span>
+                      Tổng tiền: {Number(b.totalPrice || 0).toLocaleString('vi-VN')} ₫
+                      <span style={{ fontWeight: 500, color: 'var(--color-text-light)', marginLeft: 8 }}>
+                        ({paymentText(b)})
+                      </span>
+                    </span>
                   </div>
                 </div>
               </div>

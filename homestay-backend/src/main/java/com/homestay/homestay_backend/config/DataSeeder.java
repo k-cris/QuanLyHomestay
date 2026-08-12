@@ -53,8 +53,20 @@ public class DataSeeder implements CommandLineRunner {
             host.setFullName("Chủ Nhà Demo");
             host.setPhone("0888888888");
             host.setRole(RoleEnum.HOST);
+            host.setBankName("Vietcombank");
+            host.setBankHolder("CHU NHA DEMO");
+            host.setBankAccount("0123456789");
             userRepository.save(host);
             System.out.println("Created default HOST: host@gmail.com / host123");
+        } else {
+            userRepository.findByEmail("host@gmail.com").ifPresent(host -> {
+                if (host.getBankAccount() == null || host.getBankAccount().isBlank()) {
+                    host.setBankName("Vietcombank");
+                    host.setBankHolder("CHU NHA DEMO");
+                    host.setBankAccount("0123456789");
+                    userRepository.save(host);
+                }
+            });
         }
 
         // Create sample Homestays for HOST

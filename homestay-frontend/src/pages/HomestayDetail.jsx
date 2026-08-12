@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useContext } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, Link } from 'react-router-dom';
 import {
   Star, Wifi, Car, Coffee, Tv, Wind, Waves, UtensilsCrossed,
-  WashingMachine, Home, Flame, Ban, CheckCircle2
+  WashingMachine, Home, Flame, Ban, CheckCircle2, X
 } from 'lucide-react';
 import { homestayService, bookingService, paymentService } from '../services/api';
 import { AuthContext } from '../context/AuthContext';
@@ -30,8 +30,12 @@ const HomestayDetail = () => {
   const [checkIn, setCheckIn] = useState('');
   const [checkOut, setCheckOut] = useState('');
   const [guests, setGuests] = useState(1);
+  const [note, setNote] = useState('');
   const [loading, setLoading] = useState(true);
-  const [bookingStatus, setBookingStatus] = useState({ type: '', message: '' });
+  const [bookingStatus, setBookingStatus] = useState({ type: '', text: '' });
+  const [creating, setCreating] = useState(false);
+  const [paying, setPaying] = useState(false);
+  const [pendingBooking, setPendingBooking] = useState(null);
 
   useEffect(() => {
     const fetchDetail = async () => {
@@ -57,57 +61,89 @@ const HomestayDetail = () => {
 
   const handleBooking = async (e) => {
     e.preventDefault();
-    setBookingStatus({ type: '', message: '' });
+    setBookingStatus({ type: '', text: '' });
 
     if (!user) {
-      setBookingStatus({ type: 'error', message: 'Bạn cần đăng nhập để đặt phòng!' });
+      setBookingStatus({ type: 'error', text: 'Bạn cần đăng nhập để đặt phòng!' });
+      return;
+    }
+    if (!user.hasBankAccount) {
+      setBookingStatus({
+        type: 'error',
+        text: 'Bạn cần cập nhật tài khoản ngân hàng để hệ thống hoàn tiền khi đơn không hoàn thành.'
+      });
       return;
     }
     if (!checkIn || !checkOut) {
-      setBookingStatus({ type: 'error', message: 'Vui lòng chọn ngày nhận và trả phòng' });
+      setBookingStatus({ type: 'error', text: 'Vui lòng chọn ngày nhận và trả phòng' });
       return;
     }
-
     if (checkIn < todayStr) {
-      setBookingStatus({ type: 'error', message: 'Ngày nhận phòng phải lớn hơn hoặc bằng ngày hôm nay' });
+      setBookingStatus({ type: 'error', text: 'Ngày nhận phòng phải lớn hơn hoặc bằng ngày hôm nay' });
       return;
     }
 
     const timeIn = new Date(checkIn).getTime();
     const timeOut = new Date(checkOut).getTime();
-
     if (timeOut <= timeIn) {
-      setBookingStatus({ type: 'error', message: 'Ngày trả phòng phải sau ngày nhận phòng' });
+      setBookingStatus({ type: 'error', text: 'Ngày trả phòng phải sau ngày nhận phòng' });
       return;
     }
 
     try {
+      setCreating(true);
       const bookingRes = await bookingService.create({
         homestayId: homestay.id,
         checkinDate: checkIn,
         checkoutDate: checkOut,
-        totalGuests: guests
+        totalGuests: guests,
+        note: note.trim() || null
       });
 
       const createdBooking = bookingRes.data;
+      if (!createdBooking.hostBankAccount) {
+        setBookingStatus({
+          type: 'error',
+          text: 'Chủ Homestay chưa cập nhật tài khoản nhận tiền. Không thể thanh toán.'
+        });
+        return;
+      }
 
-      await paymentService.create({
-        bookingId: createdBooking.id,
-        paymentMethod: 'BANK_TRANSFER'
-      });
-
-      setBookingStatus({
-        type: 'success',
-        message: `Tuyệt vời! Đặt phòng & Thanh toán thành công! Mã đơn: ${createdBooking.bookingCode}`
-      });
-
-      setCheckIn('');
-      setCheckOut('');
+      setPendingBooking(createdBooking);
+      setBookingStatus({ type: '', text: '' });
     } catch (error) {
       setBookingStatus({
         type: 'error',
-        message: 'Lỗi: ' + (error.response?.data || 'Phòng đã có người đặt trong thời gian này. Vui lòng chọn ngày khác!')
+        text: error.response?.data || 'Không thể tạo đơn đặt phòng'
       });
+    } finally {
+      setCreating(false);
+    }
+  };
+
+  const handleConfirmPayment = async () => {
+    if (!pendingBooking) return;
+    try {
+      setPaying(true);
+      const res = await paymentService.create({
+        bookingId: pendingBooking.id,
+        paymentMethod: 'BANK_TRANSFER'
+      });
+      setPendingBooking(null);
+      setCheckIn('');
+      setCheckOut('');
+      setNote('');
+      setBookingStatus({
+        type: 'success',
+        text: `Thanh toán thành công! Mã đơn ${pendingBooking.bookingCode}. Đã chuyển tới STK chủ nhà ${res.data.receiverBankAccount}. Đơn đang chờ Host duyệt.`
+      });
+    } catch (error) {
+      setBookingStatus({
+        type: 'error',
+        text: error.response?.data || 'Thanh toán thất bại'
+      });
+    } finally {
+      setPaying(false);
     }
   };
 
@@ -185,7 +221,21 @@ const HomestayDetail = () => {
               {Number(homestay.pricePerNight).toLocaleString('vi-VN')} ₫ <span style={{ fontWeight: 400, fontSize: '1rem' }}>/ đêm</span>
             </div>
 
-            {bookingStatus.message && (
+            {user && !user.hasBankAccount && (
+              <div style={{
+                padding: '12px 16px',
+                borderRadius: 8,
+                marginBottom: 16,
+                background: '#FEF3C7',
+                color: '#92400E',
+                fontSize: '0.875rem'
+              }}>
+                Cần cập nhật STK nhận hoàn tiền trước khi đặt phòng.{' '}
+                <Link to="/profile" style={{ fontWeight: 700, textDecoration: 'underline' }}>Cập nhật ngay</Link>
+              </div>
+            )}
+
+            {bookingStatus.text && (
               <div style={{
                 padding: '12px 16px',
                 borderRadius: '8px',
@@ -195,10 +245,17 @@ const HomestayDetail = () => {
                 border: `1px solid ${bookingStatus.type === 'error' ? '#FECDD3' : '#BBF7D0'}`,
                 fontSize: '0.875rem'
               }}>
-                {bookingStatus.message}
+                {bookingStatus.text}
+                {bookingStatus.type === 'error' && String(bookingStatus.text).includes('tài khoản ngân hàng') && (
+                  <div style={{ marginTop: 8 }}>
+                    <Link to="/profile" style={{ textDecoration: 'underline', fontWeight: 600 }}>Đi tới hồ sơ</Link>
+                  </div>
+                )}
                 {bookingStatus.type === 'success' && (
                   <div style={{ marginTop: '8px' }}>
-                    <button onClick={() => navigate('/my-bookings')} style={{ textDecoration: 'underline', color: '#15803D', fontWeight: 600 }}>Xem lịch sử chuyến đi</button>
+                    <button onClick={() => navigate('/my-bookings')} style={{ textDecoration: 'underline', color: '#15803D', fontWeight: 600 }}>
+                      Xem lịch sử chuyến đi
+                    </button>
                   </div>
                 )}
               </div>
@@ -215,9 +272,7 @@ const HomestayDetail = () => {
                     onChange={(e) => {
                       const nextCheckIn = e.target.value;
                       setCheckIn(nextCheckIn);
-                      if (checkOut && checkOut <= nextCheckIn) {
-                        setCheckOut('');
-                      }
+                      if (checkOut && checkOut <= nextCheckIn) setCheckOut('');
                     }}
                     required
                   />
@@ -241,8 +296,16 @@ const HomestayDetail = () => {
                 </select>
               </div>
 
-              <button type="submit" className="btn btn-primary" style={{ width: '100%' }}>
-                {user ? 'Đặt phòng' : 'Đăng nhập để đặt phòng'}
+              <textarea
+                rows={2}
+                value={note}
+                onChange={(e) => setNote(e.target.value)}
+                placeholder="Ghi chú cho chủ nhà (tuỳ chọn)"
+                style={{ width: '100%', marginBottom: 12, padding: 10, borderRadius: 8, border: '1px solid var(--color-border)' }}
+              />
+
+              <button type="submit" className="btn btn-primary" style={{ width: '100%' }} disabled={creating}>
+                {!user ? 'Đăng nhập để đặt phòng' : creating ? 'Đang tạo đơn...' : 'Đặt phòng & Thanh toán'}
               </button>
             </form>
 
@@ -255,6 +318,60 @@ const HomestayDetail = () => {
           </div>
         </div>
       </div>
+
+      {pendingBooking && (
+        <div style={{
+          position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.55)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: 16
+        }}>
+          <div style={{ background: '#fff', borderRadius: 12, width: '100%', maxWidth: 480, padding: 28 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+              <h2 style={{ margin: 0 }}>Thanh toán chuyển khoản</h2>
+              <X style={{ cursor: 'pointer' }} onClick={() => setPendingBooking(null)} />
+            </div>
+
+            <p style={{ color: 'var(--color-text-light)', marginBottom: 16, fontSize: '0.9rem' }}>
+              Chuyển khoản đúng số tiền tới tài khoản chủ nhà. Nội dung: <strong>{pendingBooking.bookingCode}</strong>
+            </p>
+
+            <div style={{
+              background: 'var(--color-background-alt)',
+              borderRadius: 10,
+              padding: 16,
+              marginBottom: 16,
+              lineHeight: 1.8
+            }}>
+              <div><strong>Ngân hàng:</strong> {pendingBooking.hostBankName}</div>
+              <div><strong>Chủ TK:</strong> {pendingBooking.hostBankHolder}</div>
+              <div><strong>Số TK:</strong> {pendingBooking.hostBankAccount}</div>
+              <div><strong>Số tiền:</strong> {Number(pendingBooking.totalPrice || 0).toLocaleString('vi-VN')} ₫</div>
+              <div><strong>Nội dung CK:</strong> {pendingBooking.bookingCode}</div>
+            </div>
+
+            <div style={{
+              background: '#EFF6FF',
+              color: '#1E40AF',
+              borderRadius: 8,
+              padding: '10px 12px',
+              fontSize: '0.85rem',
+              marginBottom: 16
+            }}>
+              Nếu Host từ chối đơn, hệ thống sẽ hoàn tiền về STK của bạn:
+              {' '}{user?.bankName} · {user?.bankHolder} · {user?.bankAccount}
+            </div>
+
+            <button
+              type="button"
+              className="btn btn-primary"
+              style={{ width: '100%' }}
+              disabled={paying}
+              onClick={handleConfirmPayment}
+            >
+              {paying ? 'Đang xác nhận...' : 'Tôi đã chuyển khoản'}
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
