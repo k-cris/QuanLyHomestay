@@ -89,6 +89,29 @@ public class BookingController {
         }
     }
 
+    /** UC-08: xem chính sách hoàn tiền trước khi hủy */
+    @GetMapping("/{id}/cancel-preview")
+    public ResponseEntity<?> cancelPreview(Authentication authentication, @PathVariable Long id) {
+        try {
+            User user = requireUser(authentication);
+            return ResponseEntity.ok(bookingService.getCancelPreview(user.getId(), id));
+        } catch (RuntimeException e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        }
+    }
+
+    /** UC-08 + BR-7: khách hủy đơn → Auto Refund theo % nếu đã PAID */
+    @PutMapping("/{id}/cancel")
+    public ResponseEntity<?> cancel(Authentication authentication, @PathVariable Long id) {
+        try {
+            User user = requireUser(authentication);
+            BookingResponseDto dto = bookingService.cancelBooking(user.getId(), id);
+            return ResponseEntity.ok(dto);
+        } catch (RuntimeException e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        }
+    }
+
     private User requireUser(Authentication authentication) {
         if (authentication == null || authentication.getName() == null) {
             throw new RuntimeException("Chưa đăng nhập");

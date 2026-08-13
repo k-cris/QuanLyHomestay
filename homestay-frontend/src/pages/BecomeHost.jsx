@@ -114,7 +114,7 @@ const BecomeHost = () => {
   }
 
   if (loading) {
-    return <div className="container" style={{ padding: '40px 0' }}>Đang tải...</div>;
+    return <div className="container page">Đang tải...</div>;
   }
 
   const hasPending = latestRequest?.status === 'PENDING';
@@ -125,11 +125,8 @@ const BecomeHost = () => {
     : (latestRequest?.licenseImageUrl ? [latestRequest.licenseImageUrl] : []);
 
   return (
-    <div className="container" style={{ padding: '40px 0', maxWidth: '720px' }}>
+    <div className="container page page-narrow">
       <h1>Đăng ký trở thành Chủ Homestay</h1>
-      <p style={{ color: 'var(--color-text-light)', marginBottom: '24px' }}>
-        Gửi CCCD và nhiều ảnh giấy tờ để Admin xem xét kỹ hơn trước khi duyệt lên <strong>HOST</strong>.
-      </p>
 
       {latestRequest && (
         <div style={{
@@ -214,7 +211,7 @@ const BecomeHost = () => {
 
           <div>
             <label style={{ display: 'block', marginBottom: '8px', fontWeight: 500 }}>
-              Ảnh giấy tờ * <span style={{ fontWeight: 400, color: 'var(--color-text-light)' }}>(có thể chọn nhiều ảnh)</span>
+              Ảnh giấy tờ *
             </label>
             <input
               type="file"

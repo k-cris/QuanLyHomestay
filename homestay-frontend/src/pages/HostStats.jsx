@@ -49,16 +49,17 @@ const HostStats = () => {
   if (!user || user.role !== 'HOST') return null;
 
   return (
-    <div className="container" style={{ padding: '40px 0' }}>
-      <div style={{ display: 'flex', gap: 8, marginBottom: 20, flexWrap: 'wrap' }}>
-        <Link to="/host" className="btn btn-outline" style={{ padding: '8px 14px' }}>Homestay</Link>
-        <Link to="/host/bookings" className="btn btn-outline" style={{ padding: '8px 14px' }}>Đơn đặt phòng</Link>
-        <Link to="/host/stats" className="btn btn-primary" style={{ padding: '8px 14px' }}>Thống kê</Link>
+    <div className="container page">
+      <div className="page-header">
+        <h1 style={{ margin: 0 }}>Thống kê doanh thu</h1>
+        <div className="page-actions">
+          <Link to="/host" className="btn btn-outline btn-sm">Homestay</Link>
+          <Link to="/host/bookings" className="btn btn-outline btn-sm">Đơn đặt phòng</Link>
+        </div>
       </div>
 
       <RevenueStatsPanel
-        title="Thống kê doanh thu (Host)"
-        subtitle="Doanh thu từng Homestay của bạn và tổng doanh thu. Chọn tháng để xem lại các tháng trước."
+        title="Doanh thu Host"
         data={data}
         loading={loading}
         error={error}

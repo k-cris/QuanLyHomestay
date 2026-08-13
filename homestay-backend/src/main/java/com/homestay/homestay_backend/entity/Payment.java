@@ -43,4 +43,10 @@ public class Payment {
     private String refundBankAccount;
 
     private String refundNote;
+
+    /** UC-08: phần trăm hoàn (100 / 95 / 90 / 85 / 80) */
+    private Integer refundPercent;
+
+    /** UC-08: số tiền thực hoàn về STK khách */
+    private Double refundAmount;
 }

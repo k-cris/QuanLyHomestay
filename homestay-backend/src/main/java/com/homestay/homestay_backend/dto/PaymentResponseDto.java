@@ -24,6 +24,8 @@ public class PaymentResponseDto {
     private LocalDateTime refundedAt;
     private String refundBankAccount;
     private String refundNote;
+    private Integer refundPercent;
+    private Double refundAmount;
 
     public static PaymentResponseDto from(Payment payment) {
         Long bookingId = payment.getBooking() != null ? payment.getBooking().getId() : null;
@@ -43,6 +45,8 @@ public class PaymentResponseDto {
                 .refundedAt(payment.getRefundedAt())
                 .refundBankAccount(payment.getRefundBankAccount())
                 .refundNote(payment.getRefundNote())
+                .refundPercent(payment.getRefundPercent())
+                .refundAmount(payment.getRefundAmount())
                 .build();
     }
 }

@@ -37,7 +37,9 @@ export const bookingService = {
   getMyBookings: () => api.get('/bookings/me'),
   getHostBookings: (params) => api.get('/bookings/host', { params }),
   confirm: (id) => api.put(`/bookings/${id}/confirm`),
-  reject: (id) => api.put(`/bookings/${id}/reject`)
+  reject: (id) => api.put(`/bookings/${id}/reject`),
+  cancelPreview: (id) => api.get(`/bookings/${id}/cancel-preview`),
+  cancel: (id) => api.put(`/bookings/${id}/cancel`)
 };
 
 export const paymentService = {

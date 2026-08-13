@@ -6,6 +6,7 @@ import {
 } from 'lucide-react';
 import { homestayService, bookingService, paymentService } from '../services/api';
 import { AuthContext } from '../context/AuthContext';
+import { formatHoursAsDaysLabel } from '../utils/refundPolicy';
 
 const amenityIconMap = {
   wifi: Wifi,
@@ -201,7 +202,7 @@ const HomestayDetail = () => {
             {amenities.length === 0 ? (
               <p style={{ color: 'var(--color-text-light)' }}>Chủ nhà chưa cập nhật tiện nghi.</p>
             ) : (
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+              <div className="form-grid-2" style={{ gap: 16 }}>
                 {amenities.map((a) => {
                   const Icon = amenityIconMap[a.icon] || CheckCircle2;
                   return (
@@ -211,6 +212,24 @@ const HomestayDetail = () => {
                   );
                 })}
               </div>
+            )}
+          </div>
+
+          <div className="detail-section">
+            <h3 style={{ marginBottom: '16px' }}>Chính sách hoàn tiền khi hủy</h3>
+            {(!homestay.refundRules || homestay.refundRules.length === 0) ? (
+              <p style={{ color: 'var(--color-text-light)' }}>Áp dụng chính sách mặc định của hệ thống.</p>
+            ) : (
+              <ul style={{ margin: 0, paddingLeft: 18, lineHeight: 1.8 }}>
+                {[...homestay.refundRules]
+                  .sort((a, b) => (b.minHoursBefore || 0) - (a.minHoursBefore || 0))
+                  .map((r, idx) => (
+                    <li key={r.id || idx}>
+                      Hủy trước từ <strong>{formatHoursAsDaysLabel(r.minHoursBefore)}</strong>
+                      {' '}→ hoàn <strong>{r.refundPercent}%</strong>
+                    </li>
+                  ))}
+              </ul>
             )}
           </div>
         </div>
@@ -329,10 +348,6 @@ const HomestayDetail = () => {
               <h2 style={{ margin: 0 }}>Thanh toán chuyển khoản</h2>
               <X style={{ cursor: 'pointer' }} onClick={() => setPendingBooking(null)} />
             </div>
-
-            <p style={{ color: 'var(--color-text-light)', marginBottom: 16, fontSize: '0.9rem' }}>
-              Chuyển khoản đúng số tiền tới tài khoản chủ nhà. Nội dung: <strong>{pendingBooking.bookingCode}</strong>
-            </p>
 
             <div style={{
               background: 'var(--color-background-alt)',

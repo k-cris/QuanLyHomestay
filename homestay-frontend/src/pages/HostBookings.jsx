@@ -3,6 +3,9 @@ import { Link, useNavigate } from 'react-router-dom';
 import { Check, X, Calendar, User, CreditCard, StickyNote } from 'lucide-react';
 import { AuthContext } from '../context/AuthContext';
 import { bookingService } from '../services/api';
+import { usePagination } from '../hooks/usePagination';
+import { useResponsivePageSize } from '../hooks/useResponsivePageSize';
+import ListPagination from '../components/ListPagination';
 
 const statusStyle = {
   PENDING: { bg: '#FEF3C7', color: '#92400E', label: 'Chờ duyệt' },
@@ -21,12 +24,26 @@ const paymentLabel = {
 const HostBookings = () => {
   const { user } = useContext(AuthContext);
   const navigate = useNavigate();
+  const pageSize = useResponsivePageSize();
 
   const [bookings, setBookings] = useState([]);
   const [filter, setFilter] = useState('PENDING');
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState({ type: '', text: '' });
   const [busyId, setBusyId] = useState(null);
+
+  const {
+    page,
+    setPage,
+    totalPages,
+    pageItems,
+    canPrevious,
+    canNext
+  } = usePagination({
+    items: bookings,
+    pageSize,
+    resetKey: filter
+  });
 
   const fetchBookings = async (status = filter) => {
     try {
@@ -90,37 +107,27 @@ const HostBookings = () => {
   if (!user || (user.role !== 'HOST' && user.role !== 'ADMIN')) return null;
 
   return (
-    <div className="container" style={{ padding: '40px 0' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 16, flexWrap: 'wrap', marginBottom: 8 }}>
+    <div className="container page">
+      <div className="page-header">
         <h1 style={{ margin: 0 }}>Xử lý đơn đặt phòng</h1>
-        <Link to="/host" className="btn btn-outline" style={{ padding: '10px 16px' }}>
+        <Link to="/host" className="btn btn-outline btn-sm">
           Quản lý Homestay
         </Link>
       </div>
-      <p style={{ color: 'var(--color-text-light)', marginBottom: 24 }}>
-        Host chỉ duyệt/từ chối đơn thuộc Homestay của mình. Từ chối sẽ tự động hoàn tiền nếu đã PAID (UC-06).
-      </p>
 
       {message.text && (
-        <div style={{
-          marginBottom: 16,
-          padding: '12px 16px',
-          borderRadius: 8,
-          background: message.type === 'error' ? '#FEE2E2' : '#DCFCE7',
-          color: message.type === 'error' ? '#B91C1C' : '#166534'
-        }}>
+        <div className={`page-alert ${message.type === 'error' ? 'page-alert-error' : 'page-alert-success'}`}>
           {message.text}
         </div>
       )}
 
-      <div style={{ display: 'flex', gap: 8, marginBottom: 20, flexWrap: 'wrap' }}>
+      <div className="filter-bar">
         {['PENDING', 'CONFIRM', 'REJECTED', 'CANCELLED', 'ALL'].map((s) => (
           <button
             key={s}
             type="button"
             onClick={() => setFilter(s)}
-            className={filter === s ? 'btn btn-primary' : 'btn btn-outline'}
-            style={{ padding: '8px 16px', fontSize: '0.875rem' }}
+            className={`btn btn-sm ${filter === s ? 'btn-primary' : 'btn-outline'}`}
           >
             {s}
           </button>
@@ -130,120 +137,101 @@ const HostBookings = () => {
       {loading ? (
         <p>Đang tải...</p>
       ) : bookings.length === 0 ? (
-        <div style={{ padding: 40, textAlign: 'center', background: 'var(--color-background-alt)', borderRadius: 'var(--radius-md)' }}>
-          <p style={{ color: 'var(--color-text-light)' }}>Không có đơn nào.</p>
+        <div className="empty-state">
+          <p style={{ margin: 0 }}>Không có đơn nào.</p>
         </div>
       ) : (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-          {bookings.map((b) => {
-            const st = statusStyle[b.status] || statusStyle.PENDING;
-            return (
-              <div
-                key={b.id}
-                style={{
-                  border: '1px solid var(--color-border)',
-                  borderRadius: 'var(--radius-md)',
-                  padding: 20,
-                  display: 'flex',
-                  flexDirection: 'column',
-                  gap: 12
-                }}
-              >
-                <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
-                  <div>
-                    <h3 style={{ margin: '0 0 6px' }}>
-                      {b.bookingCode} · {b.homestayTitle || 'Homestay'}
-                    </h3>
-                    <div style={{ fontSize: '0.875rem', color: 'var(--color-text-light)' }}>
-                      {b.homestayCity || '—'}
+        <>
+          <div className="list-stack">
+            {pageItems.map((b) => {
+              const st = statusStyle[b.status] || statusStyle.PENDING;
+              return (
+                <div key={b.id} className="list-card is-column">
+                  <div className="list-card-title-row">
+                    <div>
+                      <h3 style={{ marginBottom: 6 }}>
+                        {b.bookingCode} · {b.homestayTitle || 'Homestay'}
+                      </h3>
+                      <div className="list-card-meta">{b.homestayCity || '—'}</div>
                     </div>
+                    <span className="status-pill" style={{ background: st.bg, color: st.color }}>
+                      {st.label}
+                    </span>
                   </div>
-                  <span style={{
-                    alignSelf: 'flex-start',
-                    fontSize: '0.75rem',
-                    fontWeight: 600,
-                    padding: '4px 10px',
-                    borderRadius: 999,
-                    background: st.bg,
-                    color: st.color
-                  }}>
-                    {st.label}
-                  </span>
-                </div>
 
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 12, fontSize: '0.9rem' }}>
-                  <div style={{ display: 'flex', gap: 8, alignItems: 'flex-start' }}>
-                    <User size={16} style={{ marginTop: 2 }} />
-                    <div>
-                      <div><strong>{b.guestFullName || 'Khách'}</strong></div>
-                      <div style={{ color: 'var(--color-text-light)' }}>{b.guestEmail}</div>
-                      <div style={{ color: 'var(--color-text-light)' }}>{b.guestPhone || '—'}</div>
-                    </div>
-                  </div>
-                  <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-                    <Calendar size={16} />
-                    <span>{b.checkinDate} → {b.checkoutDate} · {b.totalGuests} khách</span>
-                  </div>
-                  <div style={{ display: 'flex', gap: 8, alignItems: 'flex-start' }}>
-                    <CreditCard size={16} style={{ marginTop: 2 }} />
-                    <div>
-                      <div><strong>{Number(b.totalPrice || 0).toLocaleString('vi-VN')} ₫</strong></div>
-                      <div style={{ color: 'var(--color-text-light)' }}>
-                        {b.paymentStatus ? paymentLabel[b.paymentStatus] || b.paymentStatus : 'Chưa thanh toán'}
+                  <div className="list-card-grid">
+                    <div style={{ display: 'flex', gap: 8, alignItems: 'flex-start' }}>
+                      <User size={16} style={{ marginTop: 2, flexShrink: 0 }} />
+                      <div>
+                        <div><strong>{b.guestFullName || 'Khách'}</strong></div>
+                        <div className="list-card-meta">{b.guestEmail}</div>
+                        <div className="list-card-meta">{b.guestPhone || '—'}</div>
                       </div>
-                      {b.paymentStatus === 'REFUNDED' && (
-                        <div style={{ color: '#166534', fontSize: '0.8rem' }}>
-                          Hoàn về: {b.refundBankAccount || 'Chưa có STK'}
+                    </div>
+                    <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                      <Calendar size={16} style={{ flexShrink: 0 }} />
+                      <span>{b.checkinDate} → {b.checkoutDate} · {b.totalGuests} khách</span>
+                    </div>
+                    <div style={{ display: 'flex', gap: 8, alignItems: 'flex-start' }}>
+                      <CreditCard size={16} style={{ marginTop: 2, flexShrink: 0 }} />
+                      <div>
+                        <div><strong>{Number(b.totalPrice || 0).toLocaleString('vi-VN')} ₫</strong></div>
+                        <div className="list-card-meta">
+                          {b.paymentStatus ? paymentLabel[b.paymentStatus] || b.paymentStatus : 'Chưa thanh toán'}
                         </div>
-                      )}
+                        {b.paymentStatus === 'REFUNDED' && (
+                          <div style={{ color: '#166534', fontSize: '0.8rem' }}>
+                            Hoàn về: {b.refundBankAccount || 'Chưa có STK'}
+                          </div>
+                        )}
+                      </div>
                     </div>
                   </div>
+
+                  {b.note && (
+                    <div className="note-box">
+                      <StickyNote size={16} style={{ marginTop: 2, flexShrink: 0 }} />
+                      <div>
+                        <div style={{ fontWeight: 600, fontSize: '0.85rem' }}>Ghi chú khách</div>
+                        <div style={{ fontSize: '0.875rem' }}>{b.note}</div>
+                      </div>
+                    </div>
+                  )}
+
+                  {b.status === 'PENDING' && (
+                    <div className="list-card-actions is-end">
+                      <button
+                        type="button"
+                        className="btn btn-primary btn-sm"
+                        disabled={busyId === b.id}
+                        onClick={() => handleConfirm(b.id)}
+                        style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}
+                      >
+                        <Check size={16} /> Duyệt
+                      </button>
+                      <button
+                        type="button"
+                        className="btn-danger-soft"
+                        disabled={busyId === b.id}
+                        onClick={() => handleReject(b.id)}
+                      >
+                        <X size={16} /> Từ chối + Refund
+                      </button>
+                    </div>
+                  )}
                 </div>
+              );
+            })}
+          </div>
 
-                {b.note && (
-                  <div style={{ display: 'flex', gap: 8, alignItems: 'flex-start', background: 'var(--color-background-alt)', padding: '10px 12px', borderRadius: 8 }}>
-                    <StickyNote size={16} style={{ marginTop: 2 }} />
-                    <div>
-                      <div style={{ fontWeight: 600, fontSize: '0.85rem' }}>Ghi chú khách</div>
-                      <div style={{ fontSize: '0.875rem' }}>{b.note}</div>
-                    </div>
-                  </div>
-                )}
-
-                {b.status === 'PENDING' && (
-                  <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
-                    <button
-                      type="button"
-                      className="btn btn-primary"
-                      disabled={busyId === b.id}
-                      onClick={() => handleConfirm(b.id)}
-                      style={{ padding: '10px 16px', display: 'flex', alignItems: 'center', gap: 6 }}
-                    >
-                      <Check size={16} /> Duyệt
-                    </button>
-                    <button
-                      type="button"
-                      disabled={busyId === b.id}
-                      onClick={() => handleReject(b.id)}
-                      style={{
-                        padding: '10px 16px',
-                        borderRadius: 8,
-                        background: '#FEE2E2',
-                        color: '#B91C1C',
-                        fontWeight: 600,
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: 6
-                      }}
-                    >
-                      <X size={16} /> Từ chối + Refund
-                    </button>
-                  </div>
-                )}
-              </div>
-            );
-          })}
-        </div>
+          <ListPagination
+            page={page}
+            totalPages={totalPages}
+            setPage={setPage}
+            canPrevious={canPrevious}
+            canNext={canNext}
+          />
+        </>
       )}
     </div>
   );

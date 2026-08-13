@@ -1,6 +1,6 @@
 import React, { useContext, useEffect, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
-import { ArrowLeft, Check, X } from 'lucide-react';
+import { ArrowLeft, Check, ChevronLeft, ChevronRight, X } from 'lucide-react';
 import { AuthContext } from '../context/AuthContext';
 import { hostRequestService } from '../services/api';
 
@@ -27,7 +27,7 @@ const AdminHostRequestDetail = () => {
   const [busy, setBusy] = useState(false);
   const [showReject, setShowReject] = useState(false);
   const [adminNote, setAdminNote] = useState('');
-  const [previewUrl, setPreviewUrl] = useState(null);
+  const [previewIndex, setPreviewIndex] = useState(null);
 
   const loadDetail = async () => {
     try {
@@ -52,6 +52,30 @@ const AdminHostRequestDetail = () => {
     }
     loadDetail();
   }, [user, id]);
+
+  const images = getImages(req);
+
+  useEffect(() => {
+    if (previewIndex == null) return undefined;
+
+    const onKey = (e) => {
+      if (e.key === 'Escape') setPreviewIndex(null);
+      if (e.key === 'ArrowLeft') {
+        setPreviewIndex((i) => (i == null ? i : (i - 1 + images.length) % images.length));
+      }
+      if (e.key === 'ArrowRight') {
+        setPreviewIndex((i) => (i == null ? i : (i + 1) % images.length));
+      }
+    };
+
+    window.addEventListener('keydown', onKey);
+    const prevOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => {
+      window.removeEventListener('keydown', onKey);
+      document.body.style.overflow = prevOverflow;
+    };
+  }, [previewIndex, images.length]);
 
   const handleApprove = async () => {
     if (!window.confirm('Duyệt hồ sơ này? Tài khoản sẽ được nâng lên ROLE_HOST.')) return;
@@ -87,11 +111,21 @@ const AdminHostRequestDetail = () => {
     }
   };
 
+  const showPrev = () => {
+    if (!images.length) return;
+    setPreviewIndex((i) => (i - 1 + images.length) % images.length);
+  };
+
+  const showNext = () => {
+    if (!images.length) return;
+    setPreviewIndex((i) => (i + 1) % images.length);
+  };
+
   if (!user || user.role !== 'ADMIN') return null;
-  if (loading) return <div className="container" style={{ padding: '40px 0' }}>Đang tải chi tiết...</div>;
+  if (loading) return <div className="container page">Đang tải chi tiết...</div>;
   if (!req) {
     return (
-      <div className="container" style={{ padding: '40px 0' }}>
+      <div className="container page">
         <p>{message.text || 'Không tìm thấy hồ sơ'}</p>
         <Link to="/admin" style={{ color: 'var(--color-primary)', fontWeight: 600 }}>← Quay lại danh sách</Link>
       </div>
@@ -99,10 +133,10 @@ const AdminHostRequestDetail = () => {
   }
 
   const st = statusStyle[req.status] || statusStyle.PENDING;
-  const images = getImages(req);
+  const previewUrl = previewIndex != null ? images[previewIndex] : null;
 
   return (
-    <div className="container" style={{ padding: '40px 0', maxWidth: '960px' }}>
+    <div className="container page" style={{ maxWidth: 960 }}>
       <Link
         to="/admin"
         style={{ display: 'inline-flex', alignItems: 'center', gap: 6, marginBottom: 20, fontWeight: 600, color: 'var(--color-text-dark)' }}
@@ -110,7 +144,7 @@ const AdminHostRequestDetail = () => {
         <ArrowLeft size={18} /> Quay lại danh sách
       </Link>
 
-      <div style={{ display: 'flex', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap', marginBottom: 24 }}>
+      <div className="page-header">
         <div>
           <h1 style={{ marginBottom: 8 }}>Chi tiết hồ sơ #{req.id}</h1>
           <span style={{
@@ -126,7 +160,7 @@ const AdminHostRequestDetail = () => {
         </div>
 
         {req.status === 'PENDING' && (
-          <div style={{ display: 'flex', gap: 8 }}>
+          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
             <button
               type="button"
               className="btn btn-primary"
@@ -211,7 +245,7 @@ const AdminHostRequestDetail = () => {
             <button
               key={`${url}-${index}`}
               type="button"
-              onClick={() => setPreviewUrl(url)}
+              onClick={() => setPreviewIndex(index)}
               style={{
                 padding: 0,
                 border: '1px solid var(--color-border)',
@@ -227,7 +261,7 @@ const AdminHostRequestDetail = () => {
                 style={{ width: '100%', height: 180, objectFit: 'cover', display: 'block' }}
               />
               <div style={{ padding: '8px 10px', fontSize: '0.8rem', color: 'var(--color-text-light)' }}>
-                Ảnh {index + 1} · bấm để phóng to
+                Ảnh {index + 1}
               </div>
             </button>
           ))}
@@ -247,9 +281,6 @@ const AdminHostRequestDetail = () => {
               <h2 style={{ margin: 0 }}>Từ chối hồ sơ #{req.id}</h2>
               <X style={{ cursor: 'pointer' }} onClick={() => setShowReject(false)} />
             </div>
-            <p style={{ fontSize: '0.875rem', color: 'var(--color-text-light)', marginBottom: 12 }}>
-              Theo Business Rule mục 5: từ chối phải lưu <strong>adminNote</strong>.
-            </p>
             <textarea
               rows={4}
               value={adminNote}
@@ -272,18 +303,59 @@ const AdminHostRequestDetail = () => {
 
       {previewUrl && (
         <div
-          onClick={() => setPreviewUrl(null)}
-          style={{
-            position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.85)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1100, padding: 24
-          }}
+          className="image-lightbox"
+          onClick={() => setPreviewIndex(null)}
+          role="dialog"
+          aria-modal="true"
+          aria-label={`Xem ảnh giấy tờ ${previewIndex + 1} / ${images.length}`}
         >
+          <button
+            type="button"
+            className="image-lightbox-close"
+            onClick={() => setPreviewIndex(null)}
+            aria-label="Đóng"
+          >
+            <X size={22} />
+          </button>
+
+          <div className="image-lightbox-counter" onClick={(e) => e.stopPropagation()}>
+            {previewIndex + 1} / {images.length}
+          </div>
+
+          {images.length > 1 && (
+            <button
+              type="button"
+              className="image-lightbox-nav image-lightbox-prev"
+              onClick={(e) => {
+                e.stopPropagation();
+                showPrev();
+              }}
+              aria-label="Ảnh trước"
+            >
+              <ChevronLeft size={28} />
+            </button>
+          )}
+
           <img
             src={previewUrl}
-            alt="Xem lớn"
-            style={{ maxWidth: '100%', maxHeight: '90vh', borderRadius: 8, objectFit: 'contain' }}
+            alt={`Giấy tờ ${previewIndex + 1}`}
+            className="image-lightbox-img"
             onClick={(e) => e.stopPropagation()}
           />
+
+          {images.length > 1 && (
+            <button
+              type="button"
+              className="image-lightbox-nav image-lightbox-next"
+              onClick={(e) => {
+                e.stopPropagation();
+                showNext();
+              }}
+              aria-label="Ảnh tiếp theo"
+            >
+              <ChevronRight size={28} />
+            </button>
+          )}
         </div>
       )}
     </div>

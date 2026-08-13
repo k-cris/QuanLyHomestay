@@ -55,6 +55,8 @@ public class BookingResponseDto {
     private LocalDateTime refundedAt;
     private String refundBankAccount;
     private String refundNote;
+    private Integer refundPercent;
+    private Double refundAmount;
 
     public static BookingResponseDto from(Booking booking) {
         User guest = booking.getGuest();
@@ -109,7 +111,9 @@ public class BookingResponseDto {
                     .receiverBankAccount(payment.getReceiverBankAccount())
                     .refundedAt(payment.getRefundedAt())
                     .refundBankAccount(payment.getRefundBankAccount())
-                    .refundNote(payment.getRefundNote());
+                    .refundNote(payment.getRefundNote())
+                    .refundPercent(payment.getRefundPercent())
+                    .refundAmount(payment.getRefundAmount());
         }
 
         return builder.build();

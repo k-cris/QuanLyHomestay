@@ -16,7 +16,6 @@ const formatVnd = (n) => `${Number(n || 0).toLocaleString('vi-VN')} ₫`;
  */
 const RevenueStatsPanel = ({
   title,
-  subtitle,
   data,
   loading,
   error,
@@ -53,9 +52,6 @@ const RevenueStatsPanel = ({
       <div style={{ display: 'flex', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap', marginBottom: 8 }}>
         <div>
           <h1 style={{ margin: 0 }}>{title}</h1>
-          {subtitle && (
-            <p style={{ color: 'var(--color-text-light)', marginTop: 8, marginBottom: 0 }}>{subtitle}</p>
-          )}
         </div>
 
         <div style={{ display: 'flex', gap: 10, alignItems: 'flex-end', flexWrap: 'wrap' }}>
@@ -102,7 +98,7 @@ const RevenueStatsPanel = ({
         <>
           <div style={{
             display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 160px), 1fr))',
             gap: 12,
             margin: '20px 0 28px'
           }}>
@@ -125,7 +121,7 @@ const RevenueStatsPanel = ({
             <h3 style={{ marginTop: 0, marginBottom: 12 }}>
               {data?.mode === 'year' ? 'Doanh thu theo tháng trong năm' : 'Doanh thu từng Homestay trong tháng'}
             </h3>
-            <div style={{ width: '100%', height: 300 }}>
+            <div className="chart-box">
               {chartData.every((d) => !d.revenue) ? (
                 <div style={{
                   height: '100%',
@@ -157,7 +153,7 @@ const RevenueStatsPanel = ({
           </div>
 
           <h3 style={{ marginBottom: 12 }}>Chi tiết theo từng Homestay</h3>
-          <div style={{ overflowX: 'auto', border: '1px solid var(--color-border)', borderRadius: 12 }}>
+          <div className="stats-table-wrap">
             <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: showHostColumn ? 720 : 560 }}>
               <thead>
                 <tr style={{ background: 'var(--color-background-alt)', textAlign: 'left' }}>

@@ -53,13 +53,19 @@ public class PaymentService {
         return PaymentResponseDto.from(paymentRepository.save(payment));
     }
 
-    /**
-     * BR-6 Auto Refund:
-     * chỉ hoàn khi payment = PAID và booking vừa chuyển REJECTED/CANCELLED;
-     * hoàn về bankAccount của guest; sau đó payment = REFUNDED.
-     */
+    /** Host reject / full refund: 100% */
     @Transactional
     public Payment triggerAutoRefund(Booking booking) {
+        return triggerAutoRefund(booking, 100);
+    }
+
+    /**
+     * BR-6 Auto Refund (+ UC-08 partial):
+     * chỉ hoàn khi payment = PAID và booking vừa chuyển REJECTED/CANCELLED;
+     * hoàn về bankAccount của guest theo %; sau đó payment = REFUNDED.
+     */
+    @Transactional
+    public Payment triggerAutoRefund(Booking booking, int refundPercent) {
         if (booking == null || booking.getId() == null) {
             return null;
         }
@@ -77,6 +83,10 @@ public class PaymentService {
             return payment;
         }
 
+        int percent = Math.min(100, Math.max(0, refundPercent));
+        double original = payment.getAmount() != null ? payment.getAmount() : 0;
+        double refundAmount = Math.round(original * percent) / 100.0;
+
         User guest = booking.getGuest();
         String bankAccount = guest != null ? guest.getBankAccount() : null;
         String bankHolder = guest != null ? guest.getBankHolder() : null;
@@ -89,8 +99,12 @@ public class PaymentService {
         payment.setStatus(PaymentStatusEnum.REFUNDED);
         payment.setRefundedAt(java.time.LocalDateTime.now());
         payment.setRefundBankAccount(bankAccount);
+        payment.setRefundPercent(percent);
+        payment.setRefundAmount(refundAmount);
         payment.setRefundNote(String.format(
-                "Auto refund do booking %s. Nhận: %s - %s (%s)",
+                "Auto refund %d%% (%.0f ₫) do booking %s. Nhận: %s - %s (%s)",
+                percent,
+                refundAmount,
                 status.name(),
                 bankHolder != null ? bankHolder : "N/A",
                 bankAccount,

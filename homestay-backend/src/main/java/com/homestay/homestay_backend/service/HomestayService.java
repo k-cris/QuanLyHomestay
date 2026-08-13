@@ -2,6 +2,7 @@ package com.homestay.homestay_backend.service;
 
 import com.homestay.homestay_backend.entity.Amenity;
 import com.homestay.homestay_backend.entity.Homestay;
+import com.homestay.homestay_backend.entity.HomestayRefundRule;
 import com.homestay.homestay_backend.repository.AmenityRepository;
 import com.homestay.homestay_backend.repository.BookingRepository;
 import com.homestay.homestay_backend.repository.HomestayRepository;
@@ -10,6 +11,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -19,6 +21,37 @@ public class HomestayService {
     private final HomestayRepository homestayRepository;
     private final BookingRepository bookingRepository;
     private final AmenityRepository amenityRepository;
+
+    /** Mặc định hệ thống (giờ) nếu Host không cấu hình */
+    public static List<HomestayRefundRule> defaultRefundRules() {
+        List<HomestayRefundRule> rules = new ArrayList<>();
+        rules.add(HomestayRefundRule.builder().minHoursBefore(72).refundPercent(95).build());
+        rules.add(HomestayRefundRule.builder().minHoursBefore(48).refundPercent(90).build());
+        rules.add(HomestayRefundRule.builder().minHoursBefore(24).refundPercent(85).build());
+        rules.add(HomestayRefundRule.builder().minHoursBefore(0).refundPercent(80).build());
+        return rules;
+    }
+
+    /**
+     * Chọn % hoàn: rule có minHoursBefore lớn nhất mà hoursUntil >= minHoursBefore.
+     * Không khớp → lấy bậc thấp nhất (minHoursBefore nhỏ nhất), fallback 80.
+     */
+    public static int resolveRefundPercent(List<HomestayRefundRule> rules, long hoursUntilCheckin) {
+        List<HomestayRefundRule> list = (rules == null || rules.isEmpty())
+                ? defaultRefundRules()
+                : rules;
+
+        return list.stream()
+                .filter(r -> r.getMinHoursBefore() != null && r.getRefundPercent() != null)
+                .filter(r -> hoursUntilCheckin >= r.getMinHoursBefore())
+                .max(Comparator.comparingInt(HomestayRefundRule::getMinHoursBefore))
+                .map(HomestayRefundRule::getRefundPercent)
+                .orElseGet(() -> list.stream()
+                        .filter(r -> r.getMinHoursBefore() != null && r.getRefundPercent() != null)
+                        .min(Comparator.comparingInt(HomestayRefundRule::getMinHoursBefore))
+                        .map(HomestayRefundRule::getRefundPercent)
+                        .orElse(80));
+    }
 
     // Business Rule 4: Host không được xóa Homestay đang có đơn PENDING/CONFIRM
     @Transactional
@@ -74,13 +107,7 @@ public class HomestayService {
     public Homestay getHomestayById(Long id) {
         Homestay homestay = homestayRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Homestay not found"));
-        // Touch lazy collections for detail page
-        if (homestay.getAmenities() != null) {
-            homestay.getAmenities().size();
-        }
-        if (homestay.getImages() != null) {
-            homestay.getImages().size();
-        }
+        touchCollections(homestay);
         return homestay;
     }
 
@@ -88,10 +115,7 @@ public class HomestayService {
     public java.util.List<Homestay> getHomestaysByHost(Long hostId) {
         return homestayRepository.findAll().stream()
                 .filter(h -> h.getHost().getId().equals(hostId))
-                .peek(h -> {
-                    if (h.getAmenities() != null) h.getAmenities().size();
-                    if (h.getImages() != null) h.getImages().size();
-                })
+                .peek(this::touchCollections)
                 .collect(java.util.stream.Collectors.toList());
     }
 
@@ -107,7 +131,10 @@ public class HomestayService {
             homestayData.getImages().forEach(img -> img.setHomestay(homestayData));
         }
         homestayData.setAmenities(resolveAmenities(homestayData.getAmenities()));
-        return homestayRepository.save(homestayData);
+        applyRefundRules(homestayData, homestayData.getRefundRules());
+        Homestay saved = homestayRepository.save(homestayData);
+        touchCollections(saved);
+        return saved;
     }
 
     @Transactional
@@ -138,7 +165,62 @@ public class HomestayService {
                 homestay.getImages().add(img);
             });
         }
-        return homestayRepository.save(homestay);
+
+        if (updated.getRefundRules() != null) {
+            applyRefundRules(homestay, updated.getRefundRules());
+        }
+
+        Homestay saved = homestayRepository.save(homestay);
+        touchCollections(saved);
+        return saved;
+    }
+
+    private void applyRefundRules(Homestay homestay, List<HomestayRefundRule> incoming) {
+        if (homestay.getRefundRules() == null) {
+            homestay.setRefundRules(new ArrayList<>());
+        }
+        homestay.getRefundRules().clear();
+
+        List<HomestayRefundRule> source = (incoming == null || incoming.isEmpty())
+                ? defaultRefundRules()
+                : incoming;
+
+        for (HomestayRefundRule raw : source) {
+            if (raw == null) continue;
+            int hours = raw.getMinHoursBefore() != null ? raw.getMinHoursBefore() : 0;
+            int percent = raw.getRefundPercent() != null ? raw.getRefundPercent() : 0;
+            if (hours < 0) {
+                throw new RuntimeException("Số giờ trước check-in không được âm");
+            }
+            if (percent < 0 || percent > 100) {
+                throw new RuntimeException("Phần trăm hoàn tiền phải từ 0 đến 100");
+            }
+            HomestayRefundRule rule = HomestayRefundRule.builder()
+                    .homestay(homestay)
+                    .minHoursBefore(hours)
+                    .refundPercent(percent)
+                    .build();
+            homestay.getRefundRules().add(rule);
+        }
+
+        if (homestay.getRefundRules().isEmpty()) {
+            for (HomestayRefundRule d : defaultRefundRules()) {
+                d.setHomestay(homestay);
+                homestay.getRefundRules().add(d);
+            }
+        }
+    }
+
+    private void touchCollections(Homestay homestay) {
+        if (homestay.getAmenities() != null) {
+            homestay.getAmenities().size();
+        }
+        if (homestay.getImages() != null) {
+            homestay.getImages().size();
+        }
+        if (homestay.getRefundRules() != null) {
+            homestay.getRefundRules().size();
+        }
     }
 
     private List<Amenity> resolveAmenities(List<Amenity> incoming) {

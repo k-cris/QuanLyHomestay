@@ -80,10 +80,6 @@ const Profile = () => {
 
   if (!user) return null;
 
-  const bankHint = user.role === 'HOST'
-    ? 'Tài khoản này dùng để nhận tiền khi khách thanh toán đặt phòng.'
-    : 'Tài khoản này dùng để nhận hoàn tiền khi đơn bị từ chối / hủy.';
-
   const wantsPasswordChange = Boolean(
     form.currentPassword.trim() || form.password.trim() || form.confirmPassword.trim()
   );
@@ -157,11 +153,8 @@ const Profile = () => {
   };
 
   return (
-    <div className="container" style={{ padding: '40px 0', maxWidth: 720 }}>
+    <div className="container page page-narrow">
       <h1>Thông tin cá nhân</h1>
-      <p style={{ color: 'var(--color-text-light)', marginBottom: 24 }}>
-        Role: <strong>{user.role}</strong> · {bankHint}
-      </p>
 
       {message.text && (
         <div style={{
@@ -212,8 +205,7 @@ const Profile = () => {
           />
         </div>
 
-        <h2 style={{ marginTop: 8, marginBottom: 0 }}>Tài khoản ngân hàng</h2>
-        <p style={{ color: 'var(--color-text-light)', fontSize: '0.875rem', margin: 0 }}>{bankHint}</p>
+        <h2 style={{ marginTop: 8, marginBottom: 8 }}>Tài khoản ngân hàng</h2>
 
         <div style={{ marginBottom: 4 }}>
           <label style={{ display: 'block', marginBottom: 8, fontWeight: 500 }}>Ngân hàng *</label>
@@ -269,15 +261,9 @@ const Profile = () => {
             required
             style={{ width: '100%', padding: 12, borderRadius: 8, border: '1px solid var(--color-border)' }}
           />
-          <p style={{ marginTop: 6, fontSize: '0.8rem', color: 'var(--color-text-light)' }}>
-            Tự điền từ họ tên (viết hoa, bỏ dấu). Bạn có thể sửa lại nếu khác tên trên sao kê.
-          </p>
         </div>
 
-        <h2 style={{ marginTop: 8, marginBottom: 0 }}>Đổi mật khẩu</h2>
-        <p style={{ color: 'var(--color-text-light)', fontSize: '0.875rem', margin: 0 }}>
-          Để trống nếu không đổi. Khi đổi cần nhập mật khẩu hiện tại và xác nhận mật khẩu mới.
-        </p>
+        <h2 style={{ marginTop: 8, marginBottom: 8 }}>Đổi mật khẩu</h2>
 
         <div>
           <label style={{ display: 'block', marginBottom: 8, fontWeight: 500 }}>Mật khẩu hiện tại</label>

@@ -1,6 +1,6 @@
-import React from 'react';
+import React, { useContext } from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
-import { AuthProvider } from './context/AuthContext';
+import { AuthProvider, AuthContext } from './context/AuthContext';
 import Navbar from './components/Navbar';
 import Home from './pages/Home';
 import Login from './pages/Login';
@@ -16,11 +16,13 @@ import BecomeHost from './pages/BecomeHost';
 import AdminHostRequestDetail from './pages/AdminHostRequestDetail';
 import Profile from './pages/Profile';
 
-const App = () => {
+const AppShell = () => {
+  const { user } = useContext(AuthContext);
+
   return (
-    <AuthProvider>
-      <Router>
-        <Navbar />
+    <div className={`app-shell${user ? ' app-with-sidebar' : ''}`}>
+      <Navbar />
+      <main className="app-main">
         <Routes>
           <Route path="/" element={<Home />} />
           <Route path="/login" element={<Login />} />
@@ -36,6 +38,16 @@ const App = () => {
           <Route path="/host/bookings" element={<HostBookings />} />
           <Route path="/host/stats" element={<HostStats />} />
         </Routes>
+      </main>
+    </div>
+  );
+};
+
+const App = () => {
+  return (
+    <AuthProvider>
+      <Router>
+        <AppShell />
       </Router>
     </AuthProvider>
   );

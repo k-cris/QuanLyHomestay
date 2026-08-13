@@ -5,6 +5,7 @@ import jakarta.persistence.*;
 import lombok.*;
 
 import java.math.BigDecimal;
+import java.util.ArrayList;
 import java.util.List;
 
 @Entity
@@ -57,4 +58,13 @@ public class Homestay {
     @OneToMany(mappedBy = "homestay")
     @com.fasterxml.jackson.annotation.JsonIgnore
     private List<Booking> bookings;
+
+    /**
+     * Chính sách hoàn tiền khi khách hủy (UC-08).
+     * Lưu theo giờ; cascade + orphanRemoval để Host CRUD cùng Homestay.
+     */
+    @OneToMany(mappedBy = "homestay", cascade = CascadeType.ALL, orphanRemoval = true)
+    @OrderBy("minHoursBefore DESC")
+    @Builder.Default
+    private List<HomestayRefundRule> refundRules = new ArrayList<>();
 }

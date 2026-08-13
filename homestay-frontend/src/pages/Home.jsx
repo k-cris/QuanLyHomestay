@@ -31,10 +31,10 @@ const Home = () => {
     fetchHomestays();
   }, [searchParams]);
 
-  if (loading) return <div className="container" style={{ padding: '40px 0' }}>Đang tải danh sách Homestay...</div>;
+  if (loading) return <div className="container page">Đang tải danh sách Homestay...</div>;
 
   return (
-    <div className="container">
+    <div className="container page">
       <div className="homestay-grid">
         {homestays.map(h => (
           <Link to={`/homestay/${h.id}`} key={h.id} className="homestay-card">

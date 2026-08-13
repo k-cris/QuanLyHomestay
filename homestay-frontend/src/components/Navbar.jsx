@@ -1,17 +1,34 @@
-import React, { useContext, useState } from 'react';
+import React, { useContext, useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Search, Menu, UserCircle, Home } from 'lucide-react';
 import { AuthContext } from '../context/AuthContext';
+import UserSidebar from './UserSidebar';
+
+const DESKTOP_SIDEBAR_MQ = '(min-width: 1024px)';
 
 const Navbar = () => {
   const { user, logout } = useContext(AuthContext);
   const navigate = useNavigate();
   const [city, setCity] = useState('');
   const [minPrice, setMinPrice] = useState('');
-  const [keyword, setKeyword] = useState('');
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [isDesktopSidebar, setIsDesktopSidebar] = useState(
+    () => typeof window !== 'undefined' && window.matchMedia(DESKTOP_SIDEBAR_MQ).matches
+  );
+
+  useEffect(() => {
+    const mq = window.matchMedia(DESKTOP_SIDEBAR_MQ);
+    const onChange = (e) => {
+      setIsDesktopSidebar(e.matches);
+      if (e.matches) setSidebarOpen(false);
+    };
+    mq.addEventListener('change', onChange);
+    return () => mq.removeEventListener('change', onChange);
+  }, []);
 
   const handleLogout = () => {
     logout();
+    setSidebarOpen(false);
     navigate('/login');
   };
 
@@ -24,96 +41,70 @@ const Navbar = () => {
   };
 
   return (
-    <nav className="navbar">
-      <div className="container">
-        <Link to="/" className="navbar-logo">
-          <Home fill="var(--color-primary)" color="var(--color-primary)" size={32} />
-          <span>homestay</span>
-        </Link>
+    <>
+      <nav className="navbar">
+        <div className="container navbar-inner">
+          <Link to="/" className="navbar-logo">
+            <Home fill="var(--color-primary)" color="var(--color-primary)" size={28} />
+            <span>homestay</span>
+          </Link>
 
-        <form className="navbar-search" onSubmit={handleSearch} style={{ gap: '12px', padding: '4px 4px 4px 16px' }}>
-          <input
-            type="text"
-            placeholder="Địa điểm"
-            value={city}
-            onChange={(e) => setCity(e.target.value)}
-            className="search-input-city"
-            style={{ border: 'none', outline: 'none', background: 'transparent', fontWeight: 500, fontSize: '0.875rem' }}
-          />
-          <div style={{ width: '1px', height: '24px', backgroundColor: '#ddd' }}></div>
-          <input
-            type="number"
-            placeholder="Giá tối thiểu"
-            value={minPrice}
-            onChange={(e) => setMinPrice(e.target.value)}
-            className="search-input-price"
-            style={{ border: 'none', outline: 'none', background: 'transparent', fontWeight: 500, fontSize: '0.875rem' }}
-          />
-          <button type="submit" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minWidth: '32px', height: '32px', borderRadius: '50%', backgroundColor: 'var(--color-primary)', color: '#fff', border: 'none', cursor: 'pointer' }}>
-            <Search size={14} strokeWidth={3} />
-          </button>
-        </form>
-
-        <div className="navbar-user">
-          {user && user.role === 'ADMIN' && (
-            <>
-              <Link to="/admin" className="nav-text-hidden-mobile" style={{ fontWeight: 600, fontSize: '0.875rem', cursor: 'pointer', marginRight: '16px', color: 'var(--color-primary)' }}>
-                Trang Admin
-              </Link>
-              <Link to="/admin/stats" className="nav-text-hidden-mobile" style={{ fontWeight: 600, fontSize: '0.875rem', cursor: 'pointer', marginRight: '16px', color: 'var(--color-primary)' }}>
-                Thống kê
-              </Link>
-            </>
-          )}
-          {user && user.role === 'HOST' && (
-            <>
-              <Link to="/host" className="nav-text-hidden-mobile" style={{ fontWeight: 600, fontSize: '0.875rem', cursor: 'pointer', marginRight: '16px', color: 'var(--color-primary)' }}>
-                Quản lý phòng
-              </Link>
-              <Link to="/host/bookings" className="nav-text-hidden-mobile" style={{ fontWeight: 600, fontSize: '0.875rem', cursor: 'pointer', marginRight: '16px', color: 'var(--color-primary)' }}>
-                Đơn đặt phòng
-              </Link>
-              <Link to="/host/stats" className="nav-text-hidden-mobile" style={{ fontWeight: 600, fontSize: '0.875rem', cursor: 'pointer', marginRight: '16px', color: 'var(--color-primary)' }}>
-                Thống kê
-              </Link>
-            </>
-          )}
-          {user && (
-            <Link to="/my-bookings" className="nav-text-hidden-mobile" style={{ fontWeight: 600, fontSize: '0.875rem', cursor: 'pointer', marginRight: '16px', color: 'var(--color-primary)' }}>
-              Lịch sử đặt phòng
-            </Link>
-          )}
-          {user && user.role === 'USER' && (
-            <Link to="/become-host" className="nav-text-hidden-mobile" style={{ fontWeight: 600, fontSize: '0.875rem', cursor: 'pointer', marginRight: '16px', color: 'var(--color-primary)' }}>
-              Đón tiếp khách
-            </Link>
-          )}
-          {!user && (
-            <Link to="/login" className="nav-text-hidden-mobile" style={{ fontWeight: 600, fontSize: '0.875rem', cursor: 'pointer', marginRight: '16px' }}>
-              Đón tiếp khách
-            </Link>
-          )}
-          {user && (
-            <Link to="/profile" className="nav-text-hidden-mobile" style={{ fontWeight: 600, fontSize: '0.875rem', cursor: 'pointer', marginRight: '16px', color: 'var(--color-primary)' }}>
-              Hồ sơ / STK
-            </Link>
-          )}
-          <div className="user-menu-btn">
-            <Menu size={18} />
-            <UserCircle size={24} color="var(--color-text-light)" />
-          </div>
-          {user ? (
-            <button className="btn btn-outline" onClick={handleLogout} style={{ padding: '8px 16px' }}>
-              Đăng xuất ({user.fullName})
+          <form className="navbar-search" onSubmit={handleSearch}>
+            <input
+              type="text"
+              placeholder="Địa điểm"
+              value={city}
+              onChange={(e) => setCity(e.target.value)}
+              className="search-input-city"
+            />
+            <span className="navbar-search-divider" aria-hidden="true" />
+            <input
+              type="number"
+              placeholder="Giá tối thiểu"
+              value={minPrice}
+              onChange={(e) => setMinPrice(e.target.value)}
+              className="search-input-price"
+            />
+            <button type="submit" className="navbar-search-submit" aria-label="Tìm kiếm">
+              <Search size={14} strokeWidth={3} />
             </button>
-          ) : (
-            <Link to="/login" className="btn btn-primary" style={{ padding: '8px 16px' }}>
-              Đăng nhập
-            </Link>
-          )}
+          </form>
+
+          <div className="navbar-user">
+            {!user && (
+              <Link to="/login" className="navbar-guest-link">
+                Đón tiếp khách
+              </Link>
+            )}
+
+            {user && !isDesktopSidebar && (
+              <button
+                type="button"
+                className="user-menu-btn"
+                onClick={() => setSidebarOpen(true)}
+                aria-label="Mở menu"
+                title="Menu"
+              >
+                <Menu size={18} />
+                <UserCircle size={22} color="var(--color-text-light)" />
+              </button>
+            )}
+
+            {user ? (
+              <button type="button" className="btn btn-outline btn-nav" onClick={handleLogout}>
+                Đăng xuất
+              </button>
+            ) : (
+              <Link to="/login" className="btn btn-primary btn-nav">
+                Đăng nhập
+              </Link>
+            )}
+          </div>
         </div>
-      </div>
-    </nav>
+      </nav>
+
+      <UserSidebar open={sidebarOpen || isDesktopSidebar} onClose={() => setSidebarOpen(false)} />
+    </>
   );
 };
 

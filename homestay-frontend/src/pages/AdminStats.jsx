@@ -49,15 +49,14 @@ const AdminStats = () => {
   if (!user || user.role !== 'ADMIN') return null;
 
   return (
-    <div className="container" style={{ padding: '40px 0' }}>
-      <div style={{ display: 'flex', gap: 8, marginBottom: 20, flexWrap: 'wrap' }}>
-        <Link to="/admin" className="btn btn-outline" style={{ padding: '8px 14px' }}>Duyệt Host</Link>
-        <Link to="/admin/stats" className="btn btn-primary" style={{ padding: '8px 14px' }}>Thống kê doanh thu</Link>
+    <div className="container page">
+      <div className="page-header">
+        <h1 style={{ margin: 0 }}>Thống kê doanh thu</h1>
+        <Link to="/admin" className="btn btn-outline btn-sm">Duyệt Host</Link>
       </div>
 
       <RevenueStatsPanel
-        title="Thống kê doanh thu (Admin)"
-        subtitle="Doanh thu từng Homestay toàn hệ thống, kèm tên chủ nhà. Lọc theo năm hoặc từng tháng."
+        title="Doanh thu toàn hệ thống"
         data={data}
         loading={loading}
         error={error}

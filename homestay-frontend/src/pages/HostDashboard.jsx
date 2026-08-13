@@ -2,6 +2,10 @@ import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { hostService, uploadService, amenityService } from '../services/api';
 import { Edit, Trash2, Plus, X } from 'lucide-react';
+import { DEFAULT_REFUND_RULES, formatHoursAsDaysLabel } from '../utils/refundPolicy';
+import { usePagination } from '../hooks/usePagination';
+import { useResponsivePageSize } from '../hooks/useResponsivePageSize';
+import ListPagination from '../components/ListPagination';
 
 const emptyForm = {
   title: '',
@@ -14,16 +18,31 @@ const emptyForm = {
   beds: 1,
   bathrooms: 1,
   images: [{ imageUrl: '' }],
-  amenityIds: []
+  amenityIds: [],
+  refundRules: DEFAULT_REFUND_RULES.map((r) => ({ ...r }))
 };
 
 const HostDashboard = () => {
+  const pageSize = useResponsivePageSize();
   const [homestays, setHomestays] = useState([]);
   const [amenities, setAmenities] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [currentHomestay, setCurrentHomestay] = useState(null);
   const [formData, setFormData] = useState(emptyForm);
+
+  const {
+    page,
+    setPage,
+    totalPages,
+    pageItems,
+    canPrevious,
+    canNext
+  } = usePagination({
+    items: homestays,
+    pageSize,
+    resetKey: 'host-homestays'
+  });
 
   const fetchHomestays = async () => {
     try {
@@ -48,6 +67,14 @@ const HostDashboard = () => {
   const handleOpenModal = (homestay = null) => {
     if (homestay) {
       setCurrentHomestay(homestay);
+      const rules = (homestay.refundRules || []).length
+        ? [...homestay.refundRules]
+            .sort((a, b) => (b.minHoursBefore || 0) - (a.minHoursBefore || 0))
+            .map((r) => ({
+              minHoursBefore: r.minHoursBefore ?? 0,
+              refundPercent: r.refundPercent ?? 0
+            }))
+        : DEFAULT_REFUND_RULES.map((r) => ({ ...r }));
       setFormData({
         title: homestay.title || '',
         description: homestay.description || '',
@@ -59,11 +86,17 @@ const HostDashboard = () => {
         beds: homestay.beds ?? 1,
         bathrooms: homestay.bathrooms ?? 1,
         images: homestay.images?.length > 0 ? homestay.images : [{ imageUrl: '' }],
-        amenityIds: (homestay.amenities || []).map((a) => a.id)
+        amenityIds: (homestay.amenities || []).map((a) => a.id),
+        refundRules: rules
       });
     } else {
       setCurrentHomestay(null);
-      setFormData({ ...emptyForm, images: [{ imageUrl: '' }], amenityIds: [] });
+      setFormData({
+        ...emptyForm,
+        images: [{ imageUrl: '' }],
+        amenityIds: [],
+        refundRules: DEFAULT_REFUND_RULES.map((r) => ({ ...r }))
+      });
     }
     setShowModal(true);
   };
@@ -106,6 +139,27 @@ const HostDashboard = () => {
     });
   };
 
+  const updateRefundRule = (index, field, value) => {
+    const next = [...formData.refundRules];
+    next[index] = { ...next[index], [field]: value };
+    setFormData({ ...formData, refundRules: next });
+  };
+
+  const addRefundRule = () => {
+    setFormData({
+      ...formData,
+      refundRules: [...formData.refundRules, { minHoursBefore: 0, refundPercent: 80 }]
+    });
+  };
+
+  const removeRefundRule = (index) => {
+    const next = formData.refundRules.filter((_, i) => i !== index);
+    setFormData({
+      ...formData,
+      refundRules: next.length ? next : [{ minHoursBefore: 0, refundPercent: 80 }]
+    });
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
@@ -120,7 +174,11 @@ const HostDashboard = () => {
         beds: formData.beds,
         bathrooms: formData.bathrooms,
         images: formData.images.filter((i) => i.imageUrl && i.imageUrl.trim() !== ''),
-        amenities: formData.amenityIds.map((id) => ({ id }))
+        amenities: formData.amenityIds.map((id) => ({ id })),
+        refundRules: formData.refundRules.map((r) => ({
+          minHoursBefore: Number(r.minHoursBefore) || 0,
+          refundPercent: Number(r.refundPercent) || 0
+        }))
       };
 
       if (currentHomestay) {
@@ -149,59 +207,75 @@ const HostDashboard = () => {
     }
   };
 
-  if (loading) return <div className="container" style={{ padding: '40px 0' }}>Đang tải...</div>;
+  if (loading) return <div className="container page">Đang tải...</div>;
 
   return (
-    <div className="container" style={{ padding: '40px 0' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px', gap: 12, flexWrap: 'wrap' }}>
+    <div className="container page">
+      <div className="page-header">
         <h1 style={{ margin: 0 }}>Quản lý phòng (Host)</h1>
-        <div style={{ display: 'flex', gap: 8 }}>
-          <Link to="/host/bookings" className="btn btn-outline" style={{ padding: '10px 16px' }}>
+        <div className="page-actions">
+          <Link to="/host/bookings" className="btn btn-outline btn-sm">
             Đơn đặt phòng
           </Link>
-          <Link to="/host/stats" className="btn btn-outline" style={{ padding: '10px 16px' }}>
+          <Link to="/host/stats" className="btn btn-outline btn-sm">
             Thống kê
           </Link>
-          <button className="btn btn-primary" onClick={() => handleOpenModal()} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <button type="button" className="btn btn-primary btn-sm" onClick={() => handleOpenModal()} style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
             <Plus size={18} /> Thêm Homestay
           </button>
         </div>
       </div>
 
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-        {homestays.length === 0 ? (
-          <div style={{ textAlign: 'center', padding: '60px 0', background: 'var(--color-background-alt)', borderRadius: 'var(--radius-md)' }}>
-            <p style={{ color: 'var(--color-text-light)' }}>Bạn chưa đăng Homestay nào.</p>
-          </div>
-        ) : (
-          homestays.map((h) => (
-            <div key={h.id} style={{ display: 'flex', justifyContent: 'space-between', padding: '24px', border: '1px solid var(--color-border)', borderRadius: 'var(--radius-md)', alignItems: 'center', gap: 16, flexWrap: 'wrap' }}>
-              <div style={{ display: 'flex', gap: '20px' }}>
-                <img src={h.images?.[0]?.imageUrl || 'https://placehold.co/100x100?text=No+Image'} alt="Thumbnail" style={{ width: '100px', height: '100px', objectFit: 'cover', borderRadius: '8px' }} />
-                <div>
-                  <h3 style={{ marginBottom: '8px' }}>{h.title}</h3>
-                  <div style={{ color: 'var(--color-text-light)', fontSize: '0.875rem' }}>
+      {homestays.length === 0 ? (
+        <div className="empty-state">
+          <p style={{ margin: 0 }}>Bạn chưa đăng Homestay nào.</p>
+        </div>
+      ) : (
+        <>
+          <div className="list-stack">
+            {pageItems.map((h) => (
+              <div key={h.id} className="list-card host-list-item">
+                <img
+                  className="list-card-thumb"
+                  src={h.images?.[0]?.imageUrl || 'https://placehold.co/100x100?text=No+Image'}
+                  alt="Thumbnail"
+                />
+                <div className="list-card-body">
+                  <div className="list-card-title-row">
+                    <h3>{h.title}</h3>
+                  </div>
+                  <div className="list-card-meta">
                     {h.city} · Tối đa {h.maxGuests} khách · {h.bedrooms ?? 0} PN · {h.beds ?? 0} giường · {h.bathrooms ?? 0} PT
                   </div>
-                  <div style={{ fontWeight: 600, color: 'var(--color-primary)', marginTop: '8px' }}>{Number(h.pricePerNight).toLocaleString('vi-VN')} ₫ / đêm</div>
+                  <div style={{ fontWeight: 600, color: 'var(--color-primary)', marginTop: 8 }}>
+                    {Number(h.pricePerNight).toLocaleString('vi-VN')} ₫ / đêm
+                  </div>
+                </div>
+                <div className="list-card-actions">
+                  <button type="button" className="btn btn-outline btn-sm" onClick={() => handleOpenModal(h)} style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
+                    <Edit size={16} /> Sửa
+                  </button>
+                  <button type="button" className="btn-danger-soft" onClick={() => handleDelete(h.id)}>
+                    <Trash2 size={16} /> Xóa
+                  </button>
                 </div>
               </div>
-              <div style={{ display: 'flex', gap: '12px' }}>
-                <button onClick={() => handleOpenModal(h)} style={{ padding: '8px 16px', borderRadius: '4px', border: '1px solid var(--color-border)', background: 'transparent', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <Edit size={16} /> Sửa
-                </button>
-                <button onClick={() => handleDelete(h.id)} style={{ padding: '8px 16px', borderRadius: '4px', border: 'none', background: '#FEE2E2', color: '#B91C1C', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <Trash2 size={16} /> Xóa
-                </button>
-              </div>
-            </div>
-          ))
-        )}
-      </div>
+            ))}
+          </div>
+
+          <ListPagination
+            page={page}
+            totalPages={totalPages}
+            setPage={setPage}
+            canPrevious={canPrevious}
+            canNext={canNext}
+          />
+        </>
+      )}
 
       {showModal && (
         <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1000 }}>
-          <div style={{ background: 'white', padding: '32px', borderRadius: '12px', width: '90%', maxWidth: '680px', maxHeight: '90vh', overflowY: 'auto' }}>
+          <div style={{ background: 'white', padding: 'clamp(16px, 4vw, 32px)', borderRadius: '12px', width: 'min(92vw, 680px)', maxHeight: '90vh', overflowY: 'auto' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '24px' }}>
               <h2>{currentHomestay ? 'Sửa Homestay' : 'Thêm Homestay Mới'}</h2>
               <X style={{ cursor: 'pointer' }} onClick={() => setShowModal(false)} />
@@ -223,18 +297,18 @@ const HostDashboard = () => {
                 <input type="text" value={formData.address} onChange={(e) => setFormData({ ...formData, address: e.target.value })} required style={{ width: '100%', padding: '12px', border: '1px solid var(--color-border)', borderRadius: '8px' }} />
               </div>
 
-              <div style={{ display: 'flex', gap: '16px' }}>
-                <div style={{ flex: 1 }}>
+              <div className="form-grid-2">
+                <div>
                   <label style={{ display: 'block', marginBottom: '8px', fontWeight: 500 }}>Giá mỗi đêm (VNĐ) *</label>
                   <input type="number" min="0" value={formData.pricePerNight} onChange={(e) => setFormData({ ...formData, pricePerNight: parseFloat(e.target.value) })} required style={{ width: '100%', padding: '12px', border: '1px solid var(--color-border)', borderRadius: '8px' }} />
                 </div>
-                <div style={{ flex: 1 }}>
+                <div>
                   <label style={{ display: 'block', marginBottom: '8px', fontWeight: 500 }}>Số khách tối đa *</label>
                   <input type="number" min="1" value={formData.maxGuests} onChange={(e) => setFormData({ ...formData, maxGuests: parseInt(e.target.value) || 1 })} required style={{ width: '100%', padding: '12px', border: '1px solid var(--color-border)', borderRadius: '8px' }} />
                 </div>
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '12px' }}>
+              <div className="form-grid-3">
                 <div>
                   <label style={{ display: 'block', marginBottom: '8px', fontWeight: 500 }}>Phòng ngủ *</label>
                   <input type="number" min="0" value={formData.bedrooms} onChange={(e) => setFormData({ ...formData, bedrooms: parseInt(e.target.value) || 0 })} required style={{ width: '100%', padding: '12px', border: '1px solid var(--color-border)', borderRadius: '8px' }} />
@@ -256,8 +330,7 @@ const HostDashboard = () => {
 
               <div>
                 <label style={{ display: 'block', marginBottom: '8px', fontWeight: 500 }}>Tiện nghi cung cấp</label>
-                <p style={{ fontSize: '0.8rem', color: 'var(--color-text-light)', marginBottom: 10 }}>Tick các tiện nghi để hiển thị cho khách trên trang chi tiết</p>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+                <div className="form-grid-2">
                   {amenities.map((a) => {
                     const checked = formData.amenityIds.includes(a.id);
                     return (
@@ -285,6 +358,75 @@ const HostDashboard = () => {
                     );
                   })}
                 </div>
+              </div>
+
+              <div>
+                <label style={{ display: 'block', marginBottom: '8px', fontWeight: 500 }}>Chính sách hoàn tiền *</label>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                  {formData.refundRules.map((rule, index) => (
+                    <div key={index} className="form-grid-3" style={{ alignItems: 'end' }}>
+                      <div>
+                        <label style={{ display: 'block', marginBottom: 6, fontSize: '0.8rem', fontWeight: 500 }}>
+                          Trước ít nhất (giờ)
+                        </label>
+                        <input
+                          type="number"
+                          min="0"
+                          value={rule.minHoursBefore}
+                          onChange={(e) => updateRefundRule(index, 'minHoursBefore', parseInt(e.target.value, 10) || 0)}
+                          required
+                          style={{ width: '100%', padding: '12px', border: '1px solid var(--color-border)', borderRadius: '8px' }}
+                        />
+                        <div style={{ fontSize: '0.75rem', color: 'var(--color-text-light)', marginTop: 4 }}>
+                          ≈ {formatHoursAsDaysLabel(rule.minHoursBefore)} với khách
+                        </div>
+                      </div>
+                      <div>
+                        <label style={{ display: 'block', marginBottom: 6, fontSize: '0.8rem', fontWeight: 500 }}>
+                          Hoàn (%)
+                        </label>
+                        <input
+                          type="number"
+                          min="0"
+                          max="100"
+                          value={rule.refundPercent}
+                          onChange={(e) => updateRefundRule(index, 'refundPercent', parseInt(e.target.value, 10) || 0)}
+                          required
+                          style={{ width: '100%', padding: '12px', border: '1px solid var(--color-border)', borderRadius: '8px' }}
+                        />
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => removeRefundRule(index)}
+                        style={{
+                          padding: '12px',
+                          borderRadius: 8,
+                          border: 'none',
+                          background: '#FEE2E2',
+                          color: '#B91C1C',
+                          cursor: 'pointer',
+                          height: 46
+                        }}
+                      >
+                        Xóa
+                      </button>
+                    </div>
+                  ))}
+                </div>
+                <button
+                  type="button"
+                  onClick={addRefundRule}
+                  style={{
+                    background: 'transparent',
+                    border: 'none',
+                    color: 'var(--color-primary)',
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                    marginTop: 8
+                  }}
+                >
+                  + Thêm mức hoàn tiền
+                </button>
               </div>
 
               <div>
