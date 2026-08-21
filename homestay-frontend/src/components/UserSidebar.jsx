@@ -9,7 +9,9 @@ import {
   ClipboardList,
   UserRound,
   Handshake,
-  X
+  X,
+  Banknote,
+  Undo2
 } from 'lucide-react';
 import { AuthContext } from '../context/AuthContext';
 
@@ -71,22 +73,21 @@ const UserSidebar = ({ open, onClose }) => {
             <span>Trang chủ</span>
           </Link>
 
+          <Link to="/profile" className={linkClass(isActive('/profile'))}>
+            <UserRound size={18} />
+            <span>Hồ sơ / STK</span>
+          </Link>
+
           {user.role === 'ADMIN' && (
-            <>
-              <Link
-                to="/admin"
-                className={linkClass(
-                  location.pathname === '/admin' || location.pathname.startsWith('/admin/host-requests')
-                )}
-              >
-                <LayoutDashboard size={18} />
-                <span>Trang Admin</span>
-              </Link>
-              <Link to="/admin/stats" className={linkClass(isActive('/admin/stats'))}>
-                <BarChart3 size={18} />
-                <span>Thống kê</span>
-              </Link>
-            </>
+            <Link
+              to="/admin"
+              className={linkClass(
+                location.pathname === '/admin' || location.pathname.startsWith('/admin/host-requests')
+              )}
+            >
+              <LayoutDashboard size={18} />
+              <span>Duyệt Host</span>
+            </Link>
           )}
 
           {user.role === 'HOST' && (
@@ -99,17 +100,12 @@ const UserSidebar = ({ open, onClose }) => {
                 <ClipboardList size={18} />
                 <span>Đơn đặt phòng</span>
               </Link>
-              <Link to="/host/stats" className={linkClass(isActive('/host/stats'))}>
-                <BarChart3 size={18} />
-                <span>Thống kê</span>
+              <Link to="/host/refunds" className={linkClass(isActive('/host/refunds'))}>
+                <Undo2 size={18} />
+                <span>Hoàn tiền</span>
               </Link>
             </>
           )}
-
-          <Link to="/my-bookings" className={linkClass(isActive('/my-bookings'))}>
-            <CalendarCheck size={18} />
-            <span>Lịch sử đặt phòng</span>
-          </Link>
 
           {user.role === 'USER' && (
             <Link to="/become-host" className={linkClass(isActive('/become-host'))}>
@@ -118,10 +114,29 @@ const UserSidebar = ({ open, onClose }) => {
             </Link>
           )}
 
-          <Link to="/profile" className={linkClass(isActive('/profile'))}>
-            <UserRound size={18} />
-            <span>Hồ sơ / STK</span>
+          <Link to="/my-bookings" className={linkClass(isActive('/my-bookings'))}>
+            <CalendarCheck size={18} />
+            <span>Lịch sử đặt phòng</span>
           </Link>
+
+          <Link to="/my-refunds" className={linkClass(isActive('/my-refunds'))}>
+            <Banknote size={18} />
+            <span>Hoàn tiền của tôi</span>
+          </Link>
+
+          {user.role === 'ADMIN' && (
+            <Link to="/admin/stats" className={linkClass(isActive('/admin/stats'))}>
+              <BarChart3 size={18} />
+              <span>Thống kê</span>
+            </Link>
+          )}
+
+          {user.role === 'HOST' && (
+            <Link to="/host/stats" className={linkClass(isActive('/host/stats'))}>
+              <BarChart3 size={18} />
+              <span>Thống kê</span>
+            </Link>
+          )}
         </nav>
       </aside>
     </>

@@ -48,4 +48,8 @@ public class ReviewService {
 
         return review;
     }
+
+    public List<Review> getReviewsByHomestay(Long homestayId) {
+        return reviewRepository.findByHomestayId(homestayId);
+    }
 }

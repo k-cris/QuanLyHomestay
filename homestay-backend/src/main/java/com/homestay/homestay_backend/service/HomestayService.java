@@ -53,19 +53,30 @@ public class HomestayService {
                         .orElse(80));
     }
 
-    // Business Rule 4: Host không được xóa Homestay đang có đơn PENDING/CONFIRM
+    // Fallback: Delete is now soft-delete (INACTIVE)
     @Transactional
     public void deleteHomestay(Long hostId, Long homestayId) {
         Homestay homestay = homestayRepository.findById(homestayId).orElseThrow();
         if (!homestay.getHost().getId().equals(hostId)) {
             throw new RuntimeException("Unauthorized");
         }
+        homestay.setStatus(com.homestay.homestay_backend.enums.HomestayStatusEnum.INACTIVE);
+        homestayRepository.save(homestay);
+    }
 
-        long activeBookings = bookingRepository.countActiveBookings(homestayId);
-        if (activeBookings > 0) {
-            throw new RuntimeException("Cannot delete homestay with PENDING/CONFIRM bookings");
+    @Transactional
+    public void updateHomestayStatus(Long hostId, Long homestayId, String status) {
+        Homestay homestay = homestayRepository.findById(homestayId).orElseThrow();
+        if (!homestay.getHost().getId().equals(hostId)) {
+            throw new RuntimeException("Unauthorized");
         }
-        homestayRepository.delete(homestay);
+        
+        try {
+            homestay.setStatus(com.homestay.homestay_backend.enums.HomestayStatusEnum.valueOf(status.toUpperCase()));
+            homestayRepository.save(homestay);
+        } catch (IllegalArgumentException e) {
+            throw new RuntimeException("Trạng thái không hợp lệ");
+        }
     }
 
     @Transactional
@@ -232,5 +243,27 @@ public class HomestayService {
                 .map(a -> amenityRepository.findById(a.getId())
                         .orElseThrow(() -> new RuntimeException("Amenity không tồn tại: " + a.getId())))
                 .collect(Collectors.toList());
+    }
+
+    @Transactional(readOnly = true)
+    public List<com.homestay.homestay_backend.entity.Booking> getCalendarBookings(Long hostId, Long homestayId, int month, int year) {
+        Homestay homestay = homestayRepository.findById(homestayId)
+                .orElseThrow(() -> new RuntimeException("Homestay not found"));
+        if (!homestay.getHost().getId().equals(hostId)) {
+            throw new RuntimeException("Unauthorized: Not your homestay");
+        }
+        java.time.LocalDate startDate = java.time.LocalDate.of(year, month, 1);
+        java.time.LocalDate endDate = startDate.withDayOfMonth(startDate.lengthOfMonth());
+        return bookingRepository.findOccupyingBookings(homestayId, startDate, endDate);
+    }
+
+    @Transactional(readOnly = true)
+    public List<com.homestay.homestay_backend.entity.Booking> getBookingsByDate(Long hostId, Long homestayId, java.time.LocalDate date) {
+        Homestay homestay = homestayRepository.findById(homestayId)
+                .orElseThrow(() -> new RuntimeException("Homestay not found"));
+        if (!homestay.getHost().getId().equals(hostId)) {
+            throw new RuntimeException("Unauthorized: Not your homestay");
+        }
+        return bookingRepository.findOccupyingBookings(homestayId, date, date);
     }
 }

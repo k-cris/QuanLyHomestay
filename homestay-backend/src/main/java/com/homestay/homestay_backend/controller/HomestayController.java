@@ -43,6 +43,17 @@ public class HomestayController {
         }
     }
 
+    @PutMapping("/{id}/status")
+    public ResponseEntity<?> updateHomestayStatus(@PathVariable Long id, @RequestParam String status, org.springframework.security.core.Authentication authentication) {
+        try {
+            com.homestay.homestay_backend.entity.User user = userRepository.findByEmail(authentication.getName()).orElseThrow();
+            homestayService.updateHomestayStatus(user.getId(), id, status);
+            return ResponseEntity.ok("Homestay status updated successfully");
+        } catch (RuntimeException e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        }
+    }
+
     @GetMapping("/host")
     public ResponseEntity<?> getHostHomestays(org.springframework.security.core.Authentication authentication) {
         try {
@@ -68,6 +79,26 @@ public class HomestayController {
         try {
             com.homestay.homestay_backend.entity.User user = userRepository.findByEmail(authentication.getName()).orElseThrow();
             return ResponseEntity.ok(homestayService.updateHomestay(user.getId(), id, updated));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        }
+    }
+
+    @GetMapping("/{id}/calendar")
+    public ResponseEntity<?> getHomestayCalendar(@PathVariable Long id, @RequestParam int month, @RequestParam int year, org.springframework.security.core.Authentication authentication) {
+        try {
+            com.homestay.homestay_backend.entity.User user = userRepository.findByEmail(authentication.getName()).orElseThrow();
+            return ResponseEntity.ok(homestayService.getCalendarBookings(user.getId(), id, month, year));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        }
+    }
+
+    @GetMapping("/{id}/bookings")
+    public ResponseEntity<?> getHomestayBookingsByDate(@PathVariable Long id, @RequestParam String date, org.springframework.security.core.Authentication authentication) {
+        try {
+            com.homestay.homestay_backend.entity.User user = userRepository.findByEmail(authentication.getName()).orElseThrow();
+            return ResponseEntity.ok(homestayService.getBookingsByDate(user.getId(), id, java.time.LocalDate.parse(date)));
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(e.getMessage());
         }

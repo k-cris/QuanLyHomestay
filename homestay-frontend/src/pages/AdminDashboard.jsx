@@ -1,4 +1,5 @@
 import React, { useContext, useEffect, useState } from 'react';
+import toast from 'react-hot-toast';
 import { Link, useNavigate } from 'react-router-dom';
 import { Eye } from 'lucide-react';
 import { AuthContext } from '../context/AuthContext';
@@ -49,7 +50,7 @@ const AdminDashboard = () => {
       const res = await hostRequestService.getAll(params);
       setRequests(res.data || []);
     } catch (err) {
-      setMessage({ type: 'error', text: err.response?.data || 'Không tải được danh sách hồ sơ' });
+      toast.error(err.response?.data || 'Không tải được danh sách hồ sơ');
     } finally {
       setLoading(false);
     }
@@ -72,17 +73,13 @@ const AdminDashboard = () => {
   return (
     <div className="container page">
       <div className="page-header">
-        <h1 style={{ margin: 0 }}>Admin Dashboard</h1>
+        <h1 style={{ margin: 0 }}>Duyệt Host</h1>
         <Link to="/admin/stats" className="btn btn-outline btn-sm">
           Thống kê doanh thu
         </Link>
       </div>
 
-      {message.text && (
-        <div className={`page-alert ${message.type === 'error' ? 'page-alert-error' : 'page-alert-success'}`}>
-          {message.text}
-        </div>
-      )}
+      
 
       <div className="filter-bar">
         {['PENDING', 'APPROVED', 'REJECTED', 'ALL'].map((s) => (

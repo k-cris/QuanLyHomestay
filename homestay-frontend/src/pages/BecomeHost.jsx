@@ -1,4 +1,5 @@
 import React, { useContext, useEffect, useState } from 'react';
+import toast from 'react-hot-toast';
 import { Link, useNavigate } from 'react-router-dom';
 import { Trash2 } from 'lucide-react';
 import { AuthContext } from '../context/AuthContext';
@@ -35,7 +36,7 @@ const BecomeHost = () => {
       setLatestRequest(res.data);
     } catch (err) {
       console.error(err);
-      setMessage({ type: 'error', text: 'Không tải được trạng thái hồ sơ' });
+      toast.error('Không tải được trạng thái hồ sơ');
     } finally {
       setLoading(false);
     }
@@ -67,9 +68,9 @@ const BecomeHost = () => {
         uploaded.push(toFullUrl(res.data));
       }
       setDocumentImages((prev) => [...prev, ...uploaded.filter(Boolean)]);
-      setMessage({ type: 'success', text: `Đã tải ${uploaded.length} ảnh` });
+      toast.success(`Đã tải ${uploaded.length} ảnh`);
     } catch (err) {
-      setMessage({ type: 'error', text: err.response?.data || 'Tải ảnh thất bại' });
+      toast.error(err.response?.data || 'Tải ảnh thất bại');
     } finally {
       setUploading(false);
     }
@@ -81,14 +82,14 @@ const BecomeHost = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setMessage({ type: '', text: '' });
+    
 
     if (!idCardNumber.trim()) {
-      setMessage({ type: 'error', text: 'Vui lòng nhập số CCCD' });
+      toast.error('Vui lòng nhập số CCCD');
       return;
     }
     if (documentImages.length === 0) {
-      setMessage({ type: 'error', text: 'Vui lòng tải ít nhất 1 ảnh giấy tờ' });
+      toast.error('Vui lòng tải ít nhất 1 ảnh giấy tờ');
       return;
     }
 
@@ -101,9 +102,9 @@ const BecomeHost = () => {
       setLatestRequest(res.data);
       setDocumentImages([]);
       setIdCardNumber('');
-      setMessage({ type: 'success', text: 'Đã gửi yêu cầu. Vui lòng chờ Admin duyệt.' });
+      toast.success('Đã gửi yêu cầu. Vui lòng chờ Admin duyệt.');
     } catch (err) {
-      setMessage({ type: 'error', text: err.response?.data || 'Gửi yêu cầu thất bại' });
+      toast.error(err.response?.data || 'Gửi yêu cầu thất bại');
     } finally {
       setSubmitting(false);
     }

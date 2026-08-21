@@ -74,11 +74,11 @@ public class StatsService {
         }
 
         List<Payment> filtered = paidPayments.stream()
-                .filter(p -> p.getPaidAt() != null)
+                .filter(p -> p.getBooking() != null && p.getBooking().getCheckinDate() != null)
                 .filter(p -> {
-                    LocalDateTime paidAt = p.getPaidAt();
-                    if (paidAt.getYear() != year) return false;
-                    if (monthMode && paidAt.getMonthValue() != monthParam) return false;
+                    java.time.LocalDate checkin = p.getBooking().getCheckinDate();
+                    if (checkin.getYear() != year) return false;
+                    if (monthMode && checkin.getMonthValue() != monthParam) return false;
                     return true;
                 })
                 .collect(Collectors.toList());
@@ -125,9 +125,9 @@ public class StatsService {
                 monthAgg.put(m, new double[]{0, 0});
             }
             paidPayments.stream()
-                    .filter(p -> p.getPaidAt() != null && p.getPaidAt().getYear() == year)
+                    .filter(p -> p.getBooking() != null && p.getBooking().getCheckinDate() != null && p.getBooking().getCheckinDate().getYear() == year)
                     .forEach(p -> {
-                        int m = p.getPaidAt().getMonthValue();
+                        int m = p.getBooking().getCheckinDate().getMonthValue();
                         double[] arr = monthAgg.get(m);
                         arr[0] += p.getAmount() != null ? p.getAmount() : 0;
                         arr[1] += 1;
@@ -171,9 +171,11 @@ public class StatsService {
 
     private List<Integer> resolveAvailableYears(List<Payment> paidPayments) {
         List<Integer> years = paidPayments.stream()
-                .map(Payment::getPaidAt)
+                .map(Payment::getBooking)
                 .filter(Objects::nonNull)
-                .map(LocalDateTime::getYear)
+                .map(com.homestay.homestay_backend.entity.Booking::getCheckinDate)
+                .filter(Objects::nonNull)
+                .map(java.time.LocalDate::getYear)
                 .distinct()
                 .sorted()
                 .collect(Collectors.toList());

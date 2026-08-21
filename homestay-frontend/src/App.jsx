@@ -1,5 +1,6 @@
 import React, { useContext } from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { Toaster } from 'react-hot-toast';
 import { AuthProvider, AuthContext } from './context/AuthContext';
 import Navbar from './components/Navbar';
 import Home from './pages/Home';
@@ -15,6 +16,8 @@ import MyBookings from './pages/MyBookings';
 import BecomeHost from './pages/BecomeHost';
 import AdminHostRequestDetail from './pages/AdminHostRequestDetail';
 import Profile from './pages/Profile';
+import HostRefunds from './pages/HostRefunds';
+import MyRefunds from './pages/MyRefunds';
 
 const AppShell = () => {
   const { user } = useContext(AuthContext);
@@ -36,7 +39,9 @@ const AppShell = () => {
           <Route path="/admin/host-requests/:id" element={<AdminHostRequestDetail />} />
           <Route path="/host" element={<HostDashboard />} />
           <Route path="/host/bookings" element={<HostBookings />} />
+          <Route path="/host/refunds" element={<HostRefunds />} />
           <Route path="/host/stats" element={<HostStats />} />
+          <Route path="/my-refunds" element={<MyRefunds />} />
         </Routes>
       </main>
     </div>
@@ -47,6 +52,7 @@ const App = () => {
   return (
     <AuthProvider>
       <Router>
+        <Toaster position="top-center" toastOptions={{ duration: 3000 }} />
         <AppShell />
       </Router>
     </AuthProvider>

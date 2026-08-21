@@ -10,6 +10,13 @@ const MONTH_OPTIONS = Array.from({ length: 12 }, (_, i) => ({
 
 const formatVnd = (n) => `${Number(n || 0).toLocaleString('vi-VN')} ₫`;
 
+const formatYAxis = (v) => {
+  if (v >= 1e9) return `${Math.round(v / 1e8) / 10}B`;
+  if (v >= 1e6) return `${Math.round(v / 1e5) / 10}M`;
+  if (v >= 1e3) return `${Math.round(v / 1e2) / 10}K`;
+  return v;
+};
+
 /**
  * Bộ lọc năm / tháng + biểu đồ + bảng doanh thu từng Homestay.
  * showHostColumn: Admin xem thêm tên chủ.
@@ -134,15 +141,20 @@ const RevenueStatsPanel = ({
                 </div>
               ) : (
                 <ResponsiveContainer>
-                  <BarChart data={chartData} margin={{ top: 8, right: 8, left: 8, bottom: 8 }}>
+                  <BarChart
+                    data={chartData}
+                    margin={{ top: 8, right: 8, left: 8, bottom: 8 }}
+                    tabIndex={-1}
+                  >
                     <CartesianGrid strokeDasharray="3 3" vertical={false} />
                     <XAxis dataKey="name" tick={{ fontSize: 12 }} />
-                    <YAxis tickFormatter={(v) => `${Math.round(v / 1000)}k`} width={56} />
+                    <YAxis tickFormatter={formatYAxis} width={56} />
                     <Tooltip
                       formatter={(value, name) => (
                         name === 'revenue' ? formatVnd(value) : value
                       )}
                       labelStyle={{ fontWeight: 600 }}
+                      cursor={{ fill: 'transparent' }}
                     />
                     <Legend />
                     <Bar dataKey="revenue" name="Doanh thu" fill="#FF385C" radius={[6, 6, 0, 0]} />

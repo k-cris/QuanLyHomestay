@@ -54,7 +54,10 @@ export const hostService = {
   getMyHomestays: () => api.get('/homestays/host'),
   createHomestay: (data) => api.post('/homestays', data),
   updateHomestay: (id, data) => api.put(`/homestays/${id}`, data),
-  deleteHomestay: (id) => api.delete(`/homestays/${id}`)
+  deleteHomestay: (id) => api.delete(`/homestays/${id}`),
+  updateStatus: (id, status) => api.put(`/homestays/${id}/status?status=${status}`),
+  getCalendar: (id, month, year) => api.get(`/homestays/${id}/calendar`, { params: { month, year } }),
+  getBookingsByDate: (id, date) => api.get(`/homestays/${id}/bookings`, { params: { date } })
 };
 
 export const uploadService = {
@@ -85,4 +88,17 @@ export const amenityService = {
 export const statsService = {
   host: (params) => api.get('/stats/host', { params }),
   admin: (params) => api.get('/stats/admin', { params })
+};
+
+export const reviewService = {
+  create: (data) => api.post('/reviews', data),
+  getByHomestay: (homestayId) => api.get(`/reviews/homestay/${homestayId}`)
+};
+
+export const refundService = {
+  getHostRefunds: () => api.get('/refunds/host'),
+  getById: (id) => api.get(`/refunds/${id}`),
+  confirmSent: (id) => api.put(`/refunds/${id}/confirm-sent`),
+  getMyRefunds: () => api.get('/refunds/my'),
+  confirmReceived: (id) => api.put(`/refunds/${id}/confirm-received`)
 };

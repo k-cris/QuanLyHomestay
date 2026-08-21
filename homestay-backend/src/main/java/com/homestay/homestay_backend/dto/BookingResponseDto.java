@@ -58,6 +58,8 @@ public class BookingResponseDto {
     private Integer refundPercent;
     private Double refundAmount;
 
+    private Boolean isReviewed;
+
     public static BookingResponseDto from(Booking booking) {
         User guest = booking.getGuest();
         Homestay homestay = booking.getHomestay();
@@ -73,7 +75,8 @@ public class BookingResponseDto {
                 .totalGuests(booking.getTotalGuests())
                 .totalPrice(booking.getTotalPrice())
                 .note(booking.getNote())
-                .createdAt(booking.getCreatedAt());
+                .createdAt(booking.getCreatedAt())
+                .isReviewed(booking.getReview() != null);
 
         if (guest != null) {
             builder.guestId(guest.getId())

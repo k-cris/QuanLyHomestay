@@ -1,10 +1,11 @@
 import React, { useState, useEffect, useContext } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
+import toast from 'react-hot-toast';
 import {
   Star, Wifi, Car, Coffee, Tv, Wind, Waves, UtensilsCrossed,
   WashingMachine, Home, Flame, Ban, CheckCircle2, X
 } from 'lucide-react';
-import { homestayService, bookingService, paymentService } from '../services/api';
+import { homestayService, bookingService, paymentService, reviewService } from '../services/api';
 import { AuthContext } from '../context/AuthContext';
 import { formatHoursAsDaysLabel } from '../utils/refundPolicy';
 
@@ -33,16 +34,20 @@ const HomestayDetail = () => {
   const [guests, setGuests] = useState(1);
   const [note, setNote] = useState('');
   const [loading, setLoading] = useState(true);
-  const [bookingStatus, setBookingStatus] = useState({ type: '', text: '' });
   const [creating, setCreating] = useState(false);
   const [paying, setPaying] = useState(false);
   const [pendingBooking, setPendingBooking] = useState(null);
+  const [reviews, setReviews] = useState([]);
 
   useEffect(() => {
     const fetchDetail = async () => {
       try {
-        const res = await homestayService.getById(id);
+        const [res, reviewRes] = await Promise.all([
+          homestayService.getById(id),
+          reviewService.getByHomestay(id).catch(() => ({ data: [] }))
+        ]);
         setHomestay(res.data);
+        setReviews(reviewRes.data || []);
       } catch (error) {
         console.error('Error fetching homestay detail', error);
       } finally {
@@ -62,32 +67,28 @@ const HomestayDetail = () => {
 
   const handleBooking = async (e) => {
     e.preventDefault();
-    setBookingStatus({ type: '', text: '' });
 
     if (!user) {
-      setBookingStatus({ type: 'error', text: 'Bạn cần đăng nhập để đặt phòng!' });
+      toast.error('Bạn cần đăng nhập để đặt phòng!');
       return;
     }
     if (!user.hasBankAccount) {
-      setBookingStatus({
-        type: 'error',
-        text: 'Bạn cần cập nhật tài khoản ngân hàng để hệ thống hoàn tiền khi đơn không hoàn thành.'
-      });
+      toast.error('Bạn cần cập nhật tài khoản ngân hàng (tại Hồ sơ) để hệ thống hoàn tiền khi đơn không hoàn thành.');
       return;
     }
     if (!checkIn || !checkOut) {
-      setBookingStatus({ type: 'error', text: 'Vui lòng chọn ngày nhận và trả phòng' });
+      toast.error('Vui lòng chọn ngày nhận và trả phòng');
       return;
     }
     if (checkIn < todayStr) {
-      setBookingStatus({ type: 'error', text: 'Ngày nhận phòng phải lớn hơn hoặc bằng ngày hôm nay' });
+      toast.error('Ngày nhận phòng phải lớn hơn hoặc bằng ngày hôm nay');
       return;
     }
 
     const timeIn = new Date(checkIn).getTime();
     const timeOut = new Date(checkOut).getTime();
     if (timeOut <= timeIn) {
-      setBookingStatus({ type: 'error', text: 'Ngày trả phòng phải sau ngày nhận phòng' });
+      toast.error('Ngày trả phòng phải sau ngày nhận phòng');
       return;
     }
 
@@ -103,20 +104,13 @@ const HomestayDetail = () => {
 
       const createdBooking = bookingRes.data;
       if (!createdBooking.hostBankAccount) {
-        setBookingStatus({
-          type: 'error',
-          text: 'Chủ Homestay chưa cập nhật tài khoản nhận tiền. Không thể thanh toán.'
-        });
+        toast.error('Chủ Homestay chưa cập nhật tài khoản nhận tiền. Không thể thanh toán.');
         return;
       }
 
       setPendingBooking(createdBooking);
-      setBookingStatus({ type: '', text: '' });
     } catch (error) {
-      setBookingStatus({
-        type: 'error',
-        text: error.response?.data || 'Không thể tạo đơn đặt phòng'
-      });
+      toast.error(error.response?.data || 'Không thể tạo đơn đặt phòng');
     } finally {
       setCreating(false);
     }
@@ -134,15 +128,10 @@ const HomestayDetail = () => {
       setCheckIn('');
       setCheckOut('');
       setNote('');
-      setBookingStatus({
-        type: 'success',
-        text: `Thanh toán thành công! Mã đơn ${pendingBooking.bookingCode}. Đã chuyển tới STK chủ nhà ${res.data.receiverBankAccount}. Đơn đang chờ Host duyệt.`
-      });
+      toast.success(`Thanh toán thành công! Mã đơn ${pendingBooking.bookingCode}. Đã chuyển tới STK chủ nhà ${res.data.receiverBankAccount}. Đơn đang chờ Host duyệt.`, { duration: 5000 });
+      navigate('/my-bookings');
     } catch (error) {
-      setBookingStatus({
-        type: 'error',
-        text: error.response?.data || 'Thanh toán thất bại'
-      });
+      toast.error(error.response?.data || 'Thanh toán thất bại');
     } finally {
       setPaying(false);
     }
@@ -164,32 +153,49 @@ const HomestayDetail = () => {
 
   return (
     <div className="container detail-page">
-      <div className="detail-header">
-        <h1>{homestay.title}</h1>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontWeight: 500, textDecoration: 'underline' }}>
-          <Star size={16} fill="var(--color-text-dark)" color="var(--color-text-dark)" />
-          <span>{homestay.averageRating ?? '—'}</span>
-          <span style={{ margin: '0 8px' }}>·</span>
-          <span>{homestay.city}</span>
+      <div className="detail-header" style={{ marginBottom: '24px' }}>
+        <h1 style={{ fontSize: '1.75rem', fontWeight: '600', marginBottom: '8px', color: '#222' }}>
+          {homestay.title}
+        </h1>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.95rem', color: '#222', fontWeight: 500 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+            <Star size={16} fill="#222" color="#222" />
+            <span>{homestay.averageRating ?? 'Chưa có đánh giá'}</span>
+          </div>
+          <span style={{ margin: '0 4px', color: '#717171' }}>·</span>
+          <span style={{ textDecoration: 'underline', cursor: 'pointer' }}>{homestay.city}</span>
         </div>
       </div>
 
-      <div className="detail-gallery">
-        {homestay.images && homestay.images.slice(0, 5).map((img, index) => (
-          <img key={index} src={typeof img === 'string' ? img : img.imageUrl} alt={`Hình ${index + 1}`} />
-        ))}
+      <div className={`detail-gallery gallery-${Math.min(homestay.images?.length || 0, 5)}`}>
+        {homestay.images && homestay.images.length > 0 ? (
+          homestay.images.slice(0, 5).map((img, index) => (
+            <div key={index} className={`gallery-img-wrapper img-${index}`}>
+              <img src={typeof img === 'string' ? img : img.imageUrl} alt={`Hình ${index + 1}`} className="gallery-img" />
+            </div>
+          ))
+        ) : (
+          <div className="gallery-img-wrapper img-0" style={{ background: '#e5e7eb', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <span style={{ color: '#6b7280' }}>Chưa có hình ảnh</span>
+          </div>
+        )}
       </div>
 
       <div className="detail-content">
         <div className="detail-info">
-          <div className="detail-section">
-            <h2>Toàn bộ căn nhà - Chủ nhà {homestay.host?.fullName || 'Chưa rõ'}</h2>
-            <p style={{ color: 'var(--color-text-light)' }}>
-              Tối đa {maxGuests} khách
-              {' · '}{homestay.bedrooms ?? 0} phòng ngủ
-              {' · '}{homestay.beds ?? 0} giường
-              {' · '}{homestay.bathrooms ?? 0} phòng tắm
-            </p>
+          <div className="detail-section" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div>
+              <h2 style={{ fontSize: '1.35rem', marginBottom: '4px' }}>Toàn bộ căn nhà - Chủ nhà {homestay.host?.fullName || 'Chưa rõ'}</h2>
+              <p style={{ color: '#717171', fontSize: '1rem', margin: 0 }}>
+                Tối đa {maxGuests} khách
+                {' · '}{homestay.bedrooms ?? 0} phòng ngủ
+                {' · '}{homestay.beds ?? 0} giường
+                {' · '}{homestay.bathrooms ?? 0} phòng tắm
+              </p>
+            </div>
+            <div style={{ width: 48, height: 48, borderRadius: '50%', backgroundColor: '#f3f4f6', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', flexShrink: 0 }}>
+              {homestay.host?.avatar ? <img src={homestay.host.avatar} alt="Host Avatar" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : <span style={{ fontSize: '1.2rem', fontWeight: 'bold', color: '#9ca3af' }}>{homestay.host?.fullName ? homestay.host.fullName.charAt(0).toUpperCase() : 'H'}</span>}
+            </div>
           </div>
 
           <div className="detail-section">
@@ -198,16 +204,16 @@ const HomestayDetail = () => {
           </div>
 
           <div className="detail-section">
-            <h3 style={{ marginBottom: '16px' }}>Tiện nghi cung cấp</h3>
+            <h3 style={{ fontSize: '1.2rem', marginBottom: '16px' }}>Tiện nghi cung cấp</h3>
             {amenities.length === 0 ? (
-              <p style={{ color: 'var(--color-text-light)' }}>Chủ nhà chưa cập nhật tiện nghi.</p>
+              <p style={{ color: '#717171' }}>Chủ nhà chưa cập nhật tiện nghi.</p>
             ) : (
-              <div className="form-grid-2" style={{ gap: 16 }}>
+              <div className="form-grid-2" style={{ gap: '16px 24px' }}>
                 {amenities.map((a) => {
                   const Icon = amenityIconMap[a.icon] || CheckCircle2;
                   return (
-                    <div key={a.id} style={{ display: 'flex', gap: '16px', alignItems: 'center' }}>
-                      <Icon size={20} /> {a.name}
+                    <div key={a.id} style={{ display: 'flex', gap: '16px', alignItems: 'center', fontSize: '1rem', color: '#222' }}>
+                      <Icon size={24} strokeWidth={1.5} color="#222" /> <span style={{ fontWeight: 400 }}>{a.name}</span>
                     </div>
                   );
                 })}
@@ -216,28 +222,60 @@ const HomestayDetail = () => {
           </div>
 
           <div className="detail-section">
-            <h3 style={{ marginBottom: '16px' }}>Chính sách hoàn tiền khi hủy</h3>
+            <h3 style={{ fontSize: '1.2rem', marginBottom: '16px' }}>Chính sách hoàn tiền khi hủy</h3>
             {(!homestay.refundRules || homestay.refundRules.length === 0) ? (
-              <p style={{ color: 'var(--color-text-light)' }}>Áp dụng chính sách mặc định của hệ thống.</p>
+              <p style={{ color: '#717171' }}>Áp dụng chính sách mặc định của hệ thống.</p>
             ) : (
-              <ul style={{ margin: 0, paddingLeft: 18, lineHeight: 1.8 }}>
+              <ul style={{ margin: 0, paddingLeft: 18, lineHeight: 1.8, color: '#222' }}>
                 {[...homestay.refundRules]
                   .sort((a, b) => (b.minHoursBefore || 0) - (a.minHoursBefore || 0))
                   .map((r, idx) => (
                     <li key={r.id || idx}>
                       Hủy trước từ <strong>{formatHoursAsDaysLabel(r.minHoursBefore)}</strong>
-                      {' '}→ hoàn <strong>{r.refundPercent}%</strong>
+                      {' '}→ hoàn <strong style={{ color: '#e11d48' }}>{r.refundPercent}%</strong>
                     </li>
                   ))}
               </ul>
             )}
           </div>
+
+          <div className="detail-section" style={{ borderBottom: 'none' }}>
+            <h3 style={{ fontSize: '1.2rem', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: 8 }}>
+              <Star size={20} fill="#222" color="#222" />
+              Đánh giá từ khách hàng ({reviews.length})
+            </h3>
+            {reviews.length === 0 ? (
+              <p style={{ color: '#717171' }}>Chưa có đánh giá nào cho Homestay này.</p>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+                {reviews.map(review => (
+                  <div key={review.id} style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                      <div style={{ width: 40, height: 40, borderRadius: '50%', backgroundColor: '#f3f4f6', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#9ca3af', fontWeight: 'bold' }}>
+                        {review.guestName ? review.guestName.charAt(0).toUpperCase() : 'G'}
+                      </div>
+                      <div>
+                        <div style={{ fontWeight: 600 }}>{review.guestName}</div>
+                        <div style={{ display: 'flex', gap: 2 }}>
+                          {[...Array(5)].map((_, i) => (
+                            <Star key={i} size={14} fill={i < review.rating ? '#222' : 'transparent'} color={i < review.rating ? '#222' : '#D1D5DB'} />
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                    <p style={{ margin: 0, lineHeight: 1.5 }}>{review.comment}</p>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
 
         <div>
-          <div className="booking-card">
-            <div className="booking-card-price">
-              {Number(homestay.pricePerNight).toLocaleString('vi-VN')} ₫ <span style={{ fontWeight: 400, fontSize: '1rem' }}>/ đêm</span>
+          <div className="booking-card shadow-airbnb">
+            <div className="booking-card-price" style={{ display: 'flex', alignItems: 'baseline', gap: '4px', marginBottom: '24px' }}>
+              <span style={{ fontSize: '1.4rem', fontWeight: '600' }}>{Number(homestay.pricePerNight).toLocaleString('vi-VN')} ₫</span>
+              <span style={{ fontWeight: 400, fontSize: '1rem', color: '#717171' }}>/ đêm</span>
             </div>
 
             {user && !user.hasBankAccount && (
@@ -254,55 +292,35 @@ const HomestayDetail = () => {
               </div>
             )}
 
-            {bookingStatus.text && (
-              <div style={{
-                padding: '12px 16px',
-                borderRadius: '8px',
-                marginBottom: '16px',
-                backgroundColor: bookingStatus.type === 'error' ? '#FFF1F2' : '#F0FDF4',
-                color: bookingStatus.type === 'error' ? '#E11D48' : '#16A34A',
-                border: `1px solid ${bookingStatus.type === 'error' ? '#FECDD3' : '#BBF7D0'}`,
-                fontSize: '0.875rem'
-              }}>
-                {bookingStatus.text}
-                {bookingStatus.type === 'error' && String(bookingStatus.text).includes('tài khoản ngân hàng') && (
-                  <div style={{ marginTop: 8 }}>
-                    <Link to="/profile" style={{ textDecoration: 'underline', fontWeight: 600 }}>Đi tới hồ sơ</Link>
-                  </div>
-                )}
-                {bookingStatus.type === 'success' && (
-                  <div style={{ marginTop: '8px' }}>
-                    <button onClick={() => navigate('/my-bookings')} style={{ textDecoration: 'underline', color: '#15803D', fontWeight: 600 }}>
-                      Xem lịch sử chuyến đi
-                    </button>
-                  </div>
-                )}
-              </div>
-            )}
-
             <form onSubmit={handleBooking}>
               <div className="booking-form">
                 <div className="booking-dates">
-                  <input
-                    type="date"
-                    className="booking-input"
-                    value={checkIn}
-                    min={todayStr}
-                    onChange={(e) => {
-                      const nextCheckIn = e.target.value;
-                      setCheckIn(nextCheckIn);
-                      if (checkOut && checkOut <= nextCheckIn) setCheckOut('');
-                    }}
-                    required
-                  />
-                  <input
-                    type="date"
-                    className="booking-input"
-                    value={checkOut}
-                    min={checkIn || todayStr}
-                    onChange={(e) => setCheckOut(e.target.value)}
-                    required
-                  />
+                  <div className="booking-input-wrapper">
+                    <label className="booking-input-label">Nhận phòng</label>
+                    <input
+                      type="date"
+                      className="booking-input-raw"
+                      value={checkIn}
+                      min={todayStr}
+                      onChange={(e) => {
+                        const nextCheckIn = e.target.value;
+                        setCheckIn(nextCheckIn);
+                        if (checkOut && checkOut <= nextCheckIn) setCheckOut('');
+                      }}
+                      required
+                    />
+                  </div>
+                  <div className="booking-input-wrapper">
+                    <label className="booking-input-label">Trả phòng</label>
+                    <input
+                      type="date"
+                      className="booking-input-raw"
+                      value={checkOut}
+                      min={checkIn || todayStr}
+                      onChange={(e) => setCheckOut(e.target.value)}
+                      required
+                    />
+                  </div>
                 </div>
                 <select
                   className="booking-guest"

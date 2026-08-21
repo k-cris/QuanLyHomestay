@@ -1,4 +1,5 @@
 import React, { useContext, useEffect, useState } from 'react';
+import toast from 'react-hot-toast';
 import { Link, useNavigate } from 'react-router-dom';
 import { Check, X, Calendar, User, CreditCard, StickyNote } from 'lucide-react';
 import { AuthContext } from '../context/AuthContext';
@@ -18,7 +19,7 @@ const statusStyle = {
 const paymentLabel = {
   PAID: 'Đã thanh toán',
   UNPAID: 'Chưa thanh toán',
-  REFUNDED: 'Đã hoàn tiền'
+  REFUNDED: 'Đang xử lý hoàn tiền'
 };
 
 const HostBookings = () => {
@@ -29,8 +30,8 @@ const HostBookings = () => {
   const [bookings, setBookings] = useState([]);
   const [filter, setFilter] = useState('PENDING');
   const [loading, setLoading] = useState(true);
-  const [message, setMessage] = useState({ type: '', text: '' });
   const [busyId, setBusyId] = useState(null);
+  const [confirmModal, setConfirmModal] = useState({ show: false, action: '', id: null, title: '', message: '' });
 
   const {
     page,
@@ -52,7 +53,7 @@ const HostBookings = () => {
       const res = await bookingService.getHostBookings(params);
       setBookings(res.data || []);
     } catch (err) {
-      setMessage({ type: 'error', text: err.response?.data || 'Không tải được danh sách đơn' });
+      toast.error(err.response?.data || 'Không tải được danh sách đơn');
     } finally {
       setLoading(false);
     }
@@ -70,37 +71,57 @@ const HostBookings = () => {
     fetchBookings(filter);
   }, [user, filter]);
 
-  const handleConfirm = async (id) => {
-    if (!window.confirm('Xác nhận duyệt đơn này?')) return;
-    try {
-      setBusyId(id);
-      await bookingService.confirm(id);
-      setMessage({ type: 'success', text: `Đã duyệt đơn #${id}` });
-      await fetchBookings(filter);
-    } catch (err) {
-      setMessage({ type: 'error', text: err.response?.data || 'Duyệt thất bại' });
-    } finally {
-      setBusyId(null);
-    }
+  const handleConfirm = (id) => {
+    setConfirmModal({
+      show: true,
+      action: 'confirm',
+      id,
+      title: 'Duyệt đơn',
+      message: 'Xác nhận duyệt đơn này?'
+    });
   };
 
-  const handleReject = async (id) => {
-    if (!window.confirm('Từ chối đơn này? Nếu khách đã thanh toán, hệ thống sẽ Auto Refund (BR-6).')) return;
-    try {
-      setBusyId(id);
-      const res = await bookingService.reject(id);
-      const refunded = res.data?.paymentStatus === 'REFUNDED';
-      setMessage({
-        type: 'success',
-        text: refunded
-          ? `Đã từ chối đơn #${id} và hoàn tiền về STK ${res.data.refundBankAccount || '(chưa cập nhật)'}`
-          : `Đã từ chối đơn #${id}`
-      });
-      await fetchBookings(filter);
-    } catch (err) {
-      setMessage({ type: 'error', text: err.response?.data || 'Từ chối thất bại' });
-    } finally {
-      setBusyId(null);
+  const handleReject = (id) => {
+    setConfirmModal({
+      show: true,
+      action: 'reject',
+      id,
+      title: 'Từ chối đơn',
+      message: 'Từ chối đơn này? Nếu khách đã thanh toán, hệ thống sẽ tạo yêu cầu Hoàn tiền (Refund) để bạn xử lý thủ công sau.'
+    });
+  };
+
+  const executeConfirmAction = async () => {
+    const { action, id } = confirmModal;
+    setConfirmModal({ show: false, action: '', id: null, title: '', message: '' });
+    
+    if (action === 'confirm') {
+      try {
+        setBusyId(id);
+        await bookingService.confirm(id);
+        toast.success(`Đã duyệt đơn #${id}`);
+        await fetchBookings(filter);
+      } catch (err) {
+        toast.error(err.response?.data || 'Duyệt thất bại');
+      } finally {
+        setBusyId(null);
+      }
+    } else if (action === 'reject') {
+      try {
+        setBusyId(id);
+        const res = await bookingService.reject(id);
+        const refunded = res.data?.paymentStatus === 'REFUNDED';
+        toast.success(
+          refunded
+            ? `Đã từ chối đơn #${id} và chuyển sang Hoàn tiền chờ xử lý`
+            : `Đã từ chối đơn #${id}`
+        );
+        await fetchBookings(filter);
+      } catch (err) {
+        toast.error(err.response?.data || 'Từ chối thất bại');
+      } finally {
+        setBusyId(null);
+      }
     }
   };
 
@@ -115,11 +136,7 @@ const HostBookings = () => {
         </Link>
       </div>
 
-      {message.text && (
-        <div className={`page-alert ${message.type === 'error' ? 'page-alert-error' : 'page-alert-success'}`}>
-          {message.text}
-        </div>
-      )}
+      
 
       <div className="filter-bar">
         {['PENDING', 'CONFIRM', 'REJECTED', 'CANCELLED', 'ALL'].map((s) => (
@@ -152,15 +169,18 @@ const HostBookings = () => {
                       <h3 style={{ marginBottom: 6 }}>
                         {b.bookingCode} · {b.homestayTitle || 'Homestay'}
                       </h3>
-                      <div className="list-card-meta">{b.homestayCity || '—'}</div>
+                      <div className="list-card-meta">
+                        {b.homestayCity || '—'}
+                        {b.createdAt && ` · Đặt lúc ${new Date(b.createdAt).toLocaleString('vi-VN')}`}
+                      </div>
                     </div>
                     <span className="status-pill" style={{ background: st.bg, color: st.color }}>
                       {st.label}
                     </span>
                   </div>
 
-                  <div className="list-card-grid">
-                    <div style={{ display: 'flex', gap: 8, alignItems: 'flex-start' }}>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '24px 48px', fontSize: '0.9rem', marginBottom: '12px' }}>
+                    <div style={{ display: 'flex', gap: 8, alignItems: 'flex-start', minWidth: '200px' }}>
                       <User size={16} style={{ marginTop: 2, flexShrink: 0 }} />
                       <div>
                         <div><strong>{b.guestFullName || 'Khách'}</strong></div>
@@ -168,11 +188,11 @@ const HostBookings = () => {
                         <div className="list-card-meta">{b.guestPhone || '—'}</div>
                       </div>
                     </div>
-                    <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-                      <Calendar size={16} style={{ flexShrink: 0 }} />
-                      <span>{b.checkinDate} → {b.checkoutDate} · {b.totalGuests} khách</span>
+                    <div style={{ display: 'flex', gap: 8, alignItems: 'flex-start', minWidth: '240px' }}>
+                      <Calendar size={16} style={{ marginTop: 2, flexShrink: 0 }} />
+                      <span>{b.checkinDate} → {b.checkoutDate} <br/> {b.totalGuests} khách</span>
                     </div>
-                    <div style={{ display: 'flex', gap: 8, alignItems: 'flex-start' }}>
+                    <div style={{ display: 'flex', gap: 8, alignItems: 'flex-start', minWidth: '160px' }}>
                       <CreditCard size={16} style={{ marginTop: 2, flexShrink: 0 }} />
                       <div>
                         <div><strong>{Number(b.totalPrice || 0).toLocaleString('vi-VN')} ₫</strong></div>
@@ -180,8 +200,8 @@ const HostBookings = () => {
                           {b.paymentStatus ? paymentLabel[b.paymentStatus] || b.paymentStatus : 'Chưa thanh toán'}
                         </div>
                         {b.paymentStatus === 'REFUNDED' && (
-                          <div style={{ color: '#166534', fontSize: '0.8rem' }}>
-                            Hoàn về: {b.refundBankAccount || 'Chưa có STK'}
+                          <div style={{ color: '#92400E', fontSize: '0.8rem', marginTop: 4 }}>
+                            Cần hoàn về: {b.refundBankAccount || 'Chưa có STK'}
                           </div>
                         )}
                       </div>
@@ -232,6 +252,34 @@ const HostBookings = () => {
             canNext={canNext}
           />
         </>
+      )}
+
+      {confirmModal.show && (
+        <div style={{
+          position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000
+        }}>
+          <div style={{ background: '#fff', padding: 24, borderRadius: 12, width: 400, maxWidth: '90%' }}>
+            <h3 style={{ margin: '0 0 16px 0' }}>{confirmModal.title}</h3>
+            <p style={{ lineHeight: 1.6, marginBottom: 24 }}>{confirmModal.message}</p>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 12 }}>
+              <button 
+                type="button" 
+                className="btn btn-outline" 
+                onClick={() => setConfirmModal({ show: false, action: '', id: null, title: '', message: '' })}
+              >
+                Hủy
+              </button>
+              <button 
+                type="button" 
+                className={`btn ${confirmModal.action === 'reject' ? 'btn-danger-soft' : 'btn-primary'}`} 
+                onClick={executeConfirmAction}
+              >
+                Đồng ý
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

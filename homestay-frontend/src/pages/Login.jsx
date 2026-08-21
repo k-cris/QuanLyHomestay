@@ -1,4 +1,5 @@
 import React, { useState, useContext } from 'react';
+import toast from 'react-hot-toast';
 import { Link, useNavigate } from 'react-router-dom';
 import { AuthContext } from '../context/AuthContext';
 
@@ -11,12 +12,12 @@ const Login = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setError('');
+    
     try {
       await login(email, password);
       navigate('/');
     } catch (err) {
-      setError('Đăng nhập thất bại. Vui lòng kiểm tra lại email và mật khẩu.');
+      toast.error('Đăng nhập thất bại. Vui lòng kiểm tra lại email và mật khẩu.');
     }
   };
 
@@ -45,7 +46,7 @@ const Login = () => {
               placeholder="Nhập mật khẩu"
             />
           </div>
-          {error && <div className="error-msg">{error}</div>}
+          
           <button type="submit" className="btn btn-primary auth-submit">Đăng nhập</button>
         </form>
         <div style={{ marginTop: '24px', textAlign: 'center', fontSize: '0.9rem' }}>

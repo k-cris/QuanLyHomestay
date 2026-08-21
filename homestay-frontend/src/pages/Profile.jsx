@@ -1,4 +1,5 @@
 import React, { useContext, useEffect, useRef, useState } from 'react';
+import toast from 'react-hot-toast';
 import { useNavigate } from 'react-router-dom';
 import { AuthContext } from '../context/AuthContext';
 import BankSelect from '../components/BankSelect';
@@ -86,36 +87,36 @@ const Profile = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setMessage({ type: '', text: '' });
+    
 
     if (!form.fullName.trim()) {
-      setMessage({ type: 'error', text: 'Vui lòng nhập họ tên' });
+      toast.error('Vui lòng nhập họ tên');
       return;
     }
     if (!form.bankName.trim() || !form.bankHolder.trim() || !form.bankAccount.trim()) {
-      setMessage({ type: 'error', text: 'Vui lòng chọn ngân hàng và nhập đủ chủ TK + số tài khoản' });
+      toast.error('Vui lòng chọn ngân hàng và nhập đủ chủ TK + số tài khoản');
       return;
     }
 
     if (wantsPasswordChange) {
       if (!form.currentPassword.trim()) {
-        setMessage({ type: 'error', text: 'Vui lòng nhập mật khẩu hiện tại để xác thực' });
+        toast.error('Vui lòng nhập mật khẩu hiện tại để xác thực');
         return;
       }
       if (!form.password.trim()) {
-        setMessage({ type: 'error', text: 'Vui lòng nhập mật khẩu mới' });
+        toast.error('Vui lòng nhập mật khẩu mới');
         return;
       }
       if (form.password.trim().length < 6) {
-        setMessage({ type: 'error', text: 'Mật khẩu mới phải có ít nhất 6 ký tự' });
+        toast.error('Mật khẩu mới phải có ít nhất 6 ký tự');
         return;
       }
       if (form.password !== form.confirmPassword) {
-        setMessage({ type: 'error', text: 'Xác nhận mật khẩu mới không khớp' });
+        toast.error('Xác nhận mật khẩu mới không khớp');
         return;
       }
       if (form.password === form.currentPassword) {
-        setMessage({ type: 'error', text: 'Mật khẩu mới phải khác mật khẩu hiện tại' });
+        toast.error('Mật khẩu mới phải khác mật khẩu hiện tại');
         return;
       }
     }
@@ -141,12 +142,9 @@ const Profile = () => {
         password: '',
         confirmPassword: ''
       }));
-      setMessage({
-        type: 'success',
-        text: wantsPasswordChange ? 'Cập nhật hồ sơ và mật khẩu thành công' : 'Cập nhật hồ sơ thành công'
-      });
+      toast.success(wantsPasswordChange ? 'Cập nhật hồ sơ và mật khẩu thành công' : 'Cập nhật hồ sơ thành công');
     } catch (err) {
-      setMessage({ type: 'error', text: err.response?.data || 'Cập nhật thất bại' });
+      toast.error(err.response?.data || 'Cập nhật thất bại');
     } finally {
       setSaving(false);
     }

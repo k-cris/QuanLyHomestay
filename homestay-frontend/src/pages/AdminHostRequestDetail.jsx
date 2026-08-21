@@ -1,4 +1,5 @@
 import React, { useContext, useEffect, useState } from 'react';
+import toast from 'react-hot-toast';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { ArrowLeft, Check, ChevronLeft, ChevronRight, X } from 'lucide-react';
 import { AuthContext } from '../context/AuthContext';
@@ -26,6 +27,7 @@ const AdminHostRequestDetail = () => {
   const [message, setMessage] = useState({ type: '', text: '' });
   const [busy, setBusy] = useState(false);
   const [showReject, setShowReject] = useState(false);
+  const [showApprove, setShowApprove] = useState(false);
   const [adminNote, setAdminNote] = useState('');
   const [previewIndex, setPreviewIndex] = useState(null);
 
@@ -35,7 +37,7 @@ const AdminHostRequestDetail = () => {
       const res = await hostRequestService.getById(id);
       setReq(res.data);
     } catch (err) {
-      setMessage({ type: 'error', text: err.response?.data || 'Không tải được chi tiết hồ sơ' });
+      toast.error(err.response?.data || 'Không tải được chi tiết hồ sơ');
     } finally {
       setLoading(false);
     }
@@ -77,15 +79,15 @@ const AdminHostRequestDetail = () => {
     };
   }, [previewIndex, images.length]);
 
-  const handleApprove = async () => {
-    if (!window.confirm('Duyệt hồ sơ này? Tài khoản sẽ được nâng lên ROLE_HOST.')) return;
+  const executeApprove = async () => {
+    setShowApprove(false);
     try {
       setBusy(true);
       const res = await hostRequestService.approve(id);
       setReq(res.data);
-      setMessage({ type: 'success', text: 'Đã duyệt. User đã thành HOST.' });
+      toast.success('Đã duyệt. User đã thành HOST.');
     } catch (err) {
-      setMessage({ type: 'error', text: err.response?.data || 'Duyệt thất bại' });
+      toast.error(err.response?.data || 'Duyệt thất bại');
     } finally {
       setBusy(false);
     }
@@ -94,7 +96,7 @@ const AdminHostRequestDetail = () => {
   const handleReject = async (e) => {
     e.preventDefault();
     if (!adminNote.trim()) {
-      setMessage({ type: 'error', text: 'Bắt buộc nhập adminNote khi từ chối' });
+      toast.error('Bắt buộc nhập adminNote khi từ chối');
       return;
     }
     try {
@@ -103,9 +105,9 @@ const AdminHostRequestDetail = () => {
       setReq(res.data);
       setShowReject(false);
       setAdminNote('');
-      setMessage({ type: 'success', text: 'Đã từ chối hồ sơ.' });
+      toast.success('Đã từ chối hồ sơ.');
     } catch (err) {
-      setMessage({ type: 'error', text: err.response?.data || 'Từ chối thất bại' });
+      toast.error(err.response?.data || 'Từ chối thất bại');
     } finally {
       setBusy(false);
     }
@@ -165,7 +167,7 @@ const AdminHostRequestDetail = () => {
               type="button"
               className="btn btn-primary"
               disabled={busy}
-              onClick={handleApprove}
+              onClick={() => setShowApprove(true)}
               style={{ padding: '10px 16px', display: 'flex', alignItems: 'center', gap: 6 }}
             >
               <Check size={16} /> Duyệt Host
@@ -298,6 +300,34 @@ const AdminHostRequestDetail = () => {
               </button>
             </div>
           </form>
+        </div>
+      )}
+
+      {showApprove && (
+        <div style={{
+          position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000
+        }}>
+          <div style={{ background: '#fff', padding: 24, borderRadius: 12, width: 400, maxWidth: '90%' }}>
+            <h3 style={{ margin: '0 0 16px 0' }}>Xác nhận Duyệt</h3>
+            <p style={{ lineHeight: 1.6, marginBottom: 24 }}>Duyệt hồ sơ này? Tài khoản sẽ được nâng lên ROLE_HOST.</p>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 12 }}>
+              <button 
+                type="button" 
+                className="btn btn-outline" 
+                onClick={() => setShowApprove(false)}
+              >
+                Hủy
+              </button>
+              <button 
+                type="button" 
+                className="btn btn-primary" 
+                onClick={executeApprove}
+              >
+                Đồng ý
+              </button>
+            </div>
+          </div>
         </div>
       )}
 

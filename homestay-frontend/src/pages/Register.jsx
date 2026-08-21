@@ -1,4 +1,5 @@
 import React, { useState, useContext } from 'react';
+import toast from 'react-hot-toast';
 import { Link, useNavigate } from 'react-router-dom';
 import { AuthContext } from '../context/AuthContext';
 
@@ -19,12 +20,12 @@ const Register = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setError('');
+    
     try {
       await register(formData);
       navigate('/login');
     } catch (err) {
-      setError('Đăng ký thất bại. Email có thể đã được sử dụng.');
+      toast.error('Đăng ký thất bại. Email có thể đã được sử dụng.');
     }
   };
 
@@ -77,7 +78,7 @@ const Register = () => {
               placeholder="Tạo mật khẩu"
             />
           </div>
-          {error && <div className="error-msg">{error}</div>}
+          
           <button type="submit" className="btn btn-primary auth-submit">Đăng ký</button>
         </form>
         <div style={{ marginTop: '24px', textAlign: 'center', fontSize: '0.9rem' }}>

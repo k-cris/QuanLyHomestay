@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { bookingService } from '../services/api';
-import { Calendar, MapPin, CreditCard, X } from 'lucide-react';
+import toast from 'react-hot-toast';
+import { bookingService, paymentService, reviewService } from '../services/api';
+import { Calendar, MapPin, CreditCard, X, Star } from 'lucide-react';
 import { formatHoursAsDaysLabel } from '../utils/refundPolicy';
 import { usePagination } from '../hooks/usePagination';
 import { useResponsivePageSize } from '../hooks/useResponsivePageSize';
@@ -16,6 +17,29 @@ const MyBookings = () => {
   const [preview, setPreview] = useState(null);
   const [previewLoading, setPreviewLoading] = useState(false);
   const [cancelling, setCancelling] = useState(false);
+  const [payingId, setPayingId] = useState(null);
+
+  const [reviewBooking, setReviewBooking] = useState(null);
+  const [rating, setRating] = useState(5);
+  const [comment, setComment] = useState('');
+  const [submittingReview, setSubmittingReview] = useState(false);
+
+  const handlePayment = async (bookingId) => {
+    try {
+      setPayingId(bookingId);
+      
+      await paymentService.create({
+        bookingId: bookingId,
+        paymentMethod: 'BANK_TRANSFER'
+      });
+      toast.success('Xác nhận thanh toán thành công!');
+      await fetchBookings();
+    } catch (err) {
+      toast.error(err.response?.data || 'Xác nhận thanh toán thất bại');
+    } finally {
+      setPayingId(null);
+    }
+  };
 
   const {
     page,
@@ -36,7 +60,7 @@ const MyBookings = () => {
       setBookings(res.data || []);
     } catch (err) {
       console.error('Lỗi khi tải lịch sử đơn hàng', err);
-      setMessage({ type: 'error', text: err.response?.data || 'Không tải được lịch sử đặt phòng' });
+      toast.error(err.response?.data || 'Không tải được lịch sử đặt phòng');
     } finally {
       setLoading(false);
     }
@@ -62,7 +86,7 @@ const MyBookings = () => {
     if (b.paymentStatus === 'REFUNDED') {
       const pct = b.refundPercent != null ? ` ${b.refundPercent}%` : '';
       const amt = b.refundAmount != null ? ` · ${formatVnd(b.refundAmount)}` : '';
-      return `Đã hoàn tiền${pct}${amt}${b.refundBankAccount ? ` → ${b.refundBankAccount}` : ''}`;
+      return `Chờ hoàn tiền thủ công${pct}${amt}${b.refundBankAccount ? ` → ${b.refundBankAccount}` : ''}`;
     }
     if (b.paymentStatus === 'PAID') return 'Đã thanh toán';
     return b.paymentStatus;
@@ -95,11 +119,11 @@ const MyBookings = () => {
   const openCancelPreview = async (bookingId) => {
     try {
       setPreviewLoading(true);
-      setMessage({ type: '', text: '' });
+      
       const res = await bookingService.cancelPreview(bookingId);
       setPreview(res.data);
     } catch (err) {
-      setMessage({ type: 'error', text: err.response?.data || 'Không lấy được thông tin hủy đơn' });
+      toast.error(err.response?.data || 'Không lấy được thông tin hủy đơn');
     } finally {
       setPreviewLoading(false);
     }
@@ -115,14 +139,39 @@ const MyBookings = () => {
       setMessage({
         type: 'success',
         text: refunded
-          ? `Đã hủy đơn ${res.data.bookingCode}. Hoàn ${res.data.refundPercent ?? ''}% (${formatVnd(res.data.refundAmount)}) về STK ${res.data.refundBankAccount || ''}.`
+          ? `Đã hủy đơn ${res.data.bookingCode}. Chờ xử lý hoàn ${res.data.refundPercent ?? ''}% (${formatVnd(res.data.refundAmount)}) về STK ${res.data.refundBankAccount || ''}.`
           : `Đã hủy đơn ${res.data.bookingCode}.`
       });
       await fetchBookings();
     } catch (err) {
-      setMessage({ type: 'error', text: err.response?.data || 'Hủy đơn thất bại' });
+      toast.error(err.response?.data || 'Hủy đơn thất bại');
     } finally {
       setCancelling(false);
+    }
+  };
+
+  const openReviewModal = (booking) => {
+    setReviewBooking(booking);
+    setRating(5);
+    setComment('');
+  };
+
+  const submitReview = async () => {
+    if (!reviewBooking) return;
+    try {
+      setSubmittingReview(true);
+      await reviewService.create({
+        bookingId: reviewBooking.id,
+        rating,
+        comment
+      });
+      toast.success('Đánh giá thành công!');
+      setReviewBooking(null);
+      await fetchBookings();
+    } catch (err) {
+      toast.error(err.response?.data || 'Đánh giá thất bại');
+    } finally {
+      setSubmittingReview(false);
     }
   };
 
@@ -134,11 +183,7 @@ const MyBookings = () => {
         <h1 style={{ margin: 0 }}>Chuyến đi của tôi</h1>
       </div>
 
-      {message.text && (
-        <div className={`page-alert ${message.type === 'error' ? 'page-alert-error' : 'page-alert-success'}`}>
-          {message.text}
-        </div>
-      )}
+      
 
       {bookings.length === 0 ? (
         <div className="empty-state">
@@ -177,39 +222,69 @@ const MyBookings = () => {
 
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontWeight: 600, color: 'var(--color-text-dark)', flexWrap: 'wrap' }}>
                       <CreditCard size={18} color="var(--color-primary)" style={{ flexShrink: 0 }} />
-                      <span>
-                        Tổng tiền: {formatVnd(b.totalPrice)}
-                        <span style={{ fontWeight: 500, color: 'var(--color-text-light)', marginLeft: 8 }}>
-                          ({paymentText(b)})
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+                        <span>
+                          Tổng tiền: {formatVnd(b.totalPrice)}
+                          <span style={{ fontWeight: 500, color: 'var(--color-text-light)', marginLeft: 8 }}>
+                            ({paymentText(b)})
+                          </span>
                         </span>
-                      </span>
+                        {b.status === 'PENDING' && b.paymentStatus !== 'PAID' && (
+                          <button
+                            type="button"
+                            className="btn btn-primary btn-sm"
+                            style={{ padding: '6px 12px', fontSize: '0.8rem', borderRadius: '6px' }}
+                            disabled={payingId === b.id}
+                            onClick={() => handlePayment(b.id)}
+                          >
+                            {payingId === b.id ? 'Đang xử lý...' : 'Xác nhận đã thanh toán'}
+                          </button>
+                        )}
+                      </div>
                     </div>
                   </div>
 
-                  {cancelState.show && (
-                    <div className="list-card-actions" style={{ flexDirection: 'column', alignItems: 'flex-end', gap: 6 }}>
+                  <div className="list-card-actions" style={{ flexDirection: 'column', alignItems: 'flex-end', gap: 6 }}>
+                    {cancelState.show && (
+                      <>
+                        <button
+                          type="button"
+                          className="btn btn-outline btn-sm"
+                          disabled={!cancelState.enabled || previewLoading}
+                          title={cancelState.reason || 'Hủy đặt phòng'}
+                          onClick={() => cancelState.enabled && openCancelPreview(b.id)}
+                          style={{
+                            borderColor: '#B91C1C',
+                            color: '#B91C1C',
+                            opacity: cancelState.enabled ? 1 : 0.45,
+                            cursor: cancelState.enabled ? 'pointer' : 'not-allowed'
+                          }}
+                        >
+                          Hủy đặt phòng
+                        </button>
+                        {!cancelState.enabled && cancelState.reason && (
+                          <span style={{ fontSize: '0.8rem', color: 'var(--color-text-light)', textAlign: 'right' }}>
+                            {cancelState.reason}
+                          </span>
+                        )}
+                      </>
+                    )}
+                    {b.status === 'COMPLETED' && !b.isReviewed && (
                       <button
                         type="button"
-                        className="btn btn-outline btn-sm"
-                        disabled={!cancelState.enabled || previewLoading}
-                        title={cancelState.reason || 'Hủy đặt phòng'}
-                        onClick={() => cancelState.enabled && openCancelPreview(b.id)}
-                        style={{
-                          borderColor: '#B91C1C',
-                          color: '#B91C1C',
-                          opacity: cancelState.enabled ? 1 : 0.45,
-                          cursor: cancelState.enabled ? 'pointer' : 'not-allowed'
-                        }}
+                        className="btn btn-primary btn-sm"
+                        onClick={() => openReviewModal(b)}
+                        style={{ padding: '6px 12px' }}
                       >
-                        Hủy đặt phòng
+                        Đánh giá Homestay
                       </button>
-                      {!cancelState.enabled && cancelState.reason && (
-                        <span style={{ fontSize: '0.8rem', color: 'var(--color-text-light)', textAlign: 'right' }}>
-                          {cancelState.reason}
-                        </span>
-                      )}
-                    </div>
-                  )}
+                    )}
+                    {b.status === 'COMPLETED' && b.isReviewed && (
+                      <span style={{ fontSize: '0.9rem', color: 'var(--color-primary)', fontWeight: 500, display: 'flex', alignItems: 'center', gap: 4 }}>
+                        <Star size={16} fill="currentColor" /> Đã đánh giá
+                      </span>
+                    )}
+                  </div>
                 </div>
               );
             })}
@@ -272,8 +347,9 @@ const MyBookings = () => {
                 </div>
 
                 <div
-                  className="page-alert"
                   style={{
+                    padding: '12px 16px',
+                    borderRadius: 8,
                     background: preview.refundPercent < 100 && preview.willRefund ? '#FEF3C7' : '#EFF6FF',
                     color: preview.refundPercent < 100 && preview.willRefund ? '#92400E' : '#1E3A8A',
                     fontSize: '0.9rem',
@@ -305,6 +381,75 @@ const MyBookings = () => {
                   {cancelling ? 'Đang hủy...' : 'Xác nhận hủy'}
                 </button>
               )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {reviewBooking && (
+        <div
+          className="modal-overlay"
+          style={{
+            position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.55)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: 16
+          }}
+          onClick={() => !submittingReview && setReviewBooking(null)}
+        >
+          <div
+            style={{ background: '#fff', borderRadius: 12, width: '100%', maxWidth: 480, padding: 'clamp(18px, 4vw, 28px)' }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="list-card-title-row" style={{ marginBottom: 16 }}>
+              <h2 style={{ margin: 0 }}>Đánh giá Homestay</h2>
+              <button type="button" onClick={() => setReviewBooking(null)} disabled={submittingReview} aria-label="Đóng">
+                <X size={20} />
+              </button>
+            </div>
+
+            <div style={{ marginBottom: 16 }}>
+              <p style={{ margin: '0 0 8px' }}>Chuyến đi của bạn tại <strong>{reviewBooking.homestayTitle}</strong> thế nào?</p>
+              <div style={{ display: 'flex', gap: 4 }}>
+                {[1, 2, 3, 4, 5].map((star) => (
+                  <button
+                    key={star}
+                    type="button"
+                    onClick={() => setRating(star)}
+                    style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer' }}
+                  >
+                    <Star size={32} fill={rating >= star ? '#FBBF24' : 'transparent'} color={rating >= star ? '#FBBF24' : '#D1D5DB'} />
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="form-group" style={{ marginBottom: 20 }}>
+              <label>Bình luận của bạn</label>
+              <textarea
+                rows={4}
+                value={comment}
+                onChange={(e) => setComment(e.target.value)}
+                placeholder="Chia sẻ trải nghiệm của bạn..."
+                style={{ width: '100%', resize: 'vertical' }}
+              />
+            </div>
+
+            <div className="list-card-actions is-end">
+              <button
+                type="button"
+                className="btn btn-outline btn-sm"
+                disabled={submittingReview}
+                onClick={() => setReviewBooking(null)}
+              >
+                Hủy
+              </button>
+              <button
+                type="button"
+                className="btn btn-primary btn-sm"
+                disabled={submittingReview}
+                onClick={submitReview}
+              >
+                {submittingReview ? 'Đang gửi...' : 'Gửi đánh giá'}
+              </button>
             </div>
           </div>
         </div>
