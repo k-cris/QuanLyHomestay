@@ -110,7 +110,7 @@ const UserSidebar = ({ open, onClose }) => {
           {user.role === 'USER' && (
             <Link to="/become-host" className={linkClass(isActive('/become-host'))}>
               <Handshake size={18} />
-              <span>Đón tiếp khách</span>
+              <span>Đăng ký kinh doanh</span>
             </Link>
           )}
 

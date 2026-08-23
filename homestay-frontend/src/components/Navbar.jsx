@@ -1,5 +1,5 @@
 import React, { useContext, useEffect, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { Search, Menu, UserCircle, Home } from 'lucide-react';
 import { AuthContext } from '../context/AuthContext';
 import UserSidebar from './UserSidebar';
@@ -9,12 +9,24 @@ const DESKTOP_SIDEBAR_MQ = '(min-width: 1024px)';
 const Navbar = () => {
   const { user, logout } = useContext(AuthContext);
   const navigate = useNavigate();
+  const location = useLocation();
   const [city, setCity] = useState('');
   const [minPrice, setMinPrice] = useState('');
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [isDesktopSidebar, setIsDesktopSidebar] = useState(
     () => typeof window !== 'undefined' && window.matchMedia(DESKTOP_SIDEBAR_MQ).matches
   );
+
+  useEffect(() => {
+    if (location.pathname === '/') {
+      const searchParams = new URLSearchParams(location.search);
+      setCity(searchParams.get('city') || '');
+      setMinPrice(searchParams.get('minPrice') || '');
+    } else {
+      setCity('');
+      setMinPrice('');
+    }
+  }, [location.pathname, location.search]);
 
   useEffect(() => {
     const mq = window.matchMedia(DESKTOP_SIDEBAR_MQ);
@@ -45,8 +57,7 @@ const Navbar = () => {
       <nav className="navbar">
         <div className="container navbar-inner">
           <Link to="/" className="navbar-logo">
-            <Home fill="var(--color-primary)" color="var(--color-primary)" size={28} />
-            <span>homestay</span>
+            <img src="/logo.png" alt="CastleKey Logo" style={{ height: '40px', width: 'auto' }} />
           </Link>
 
           <form className="navbar-search" onSubmit={handleSearch}>
@@ -71,9 +82,9 @@ const Navbar = () => {
           </form>
 
           <div className="navbar-user">
-            {!user && (
-              <Link to="/login" className="navbar-guest-link">
-                Đón tiếp khách
+            {user?.role === 'USER' && (
+              <Link to="/become-host" className="navbar-guest-link">
+                Đăng ký kinh doanh
               </Link>
             )}
 
