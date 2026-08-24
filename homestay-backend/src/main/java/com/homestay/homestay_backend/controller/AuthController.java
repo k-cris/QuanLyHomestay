@@ -33,17 +33,17 @@ public class AuthController {
     public ResponseEntity<?> login(@RequestBody Map<String, String> payload) {
         String email = payload.get("email");
         String password = payload.get("password");
-        
+
         User user = userRepository.findByEmail(email).orElse(null);
         if (user == null || !user.getPassword().equals(password)) {
             return ResponseEntity.status(401).body("Sai email hoặc mật khẩu");
         }
-        
+
         String token = jwtUtil.generateToken(user.getEmail(), "ROLE_" + user.getRole().name());
         Map<String, Object> response = new HashMap<>();
         response.put("token", token);
         response.put("user", UserResponseDto.from(user));
-        
+
         return ResponseEntity.ok(response);
     }
 

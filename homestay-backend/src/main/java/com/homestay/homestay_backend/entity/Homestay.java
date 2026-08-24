@@ -44,7 +44,7 @@ public class Homestay {
     private Double latitude;
     private Double longitude;
 
-    @OneToMany(mappedBy = "homestay", cascade = CascadeType.ALL)
+    @OneToMany(mappedBy = "homestay", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<HomestayImage> images;
 
     @ManyToMany

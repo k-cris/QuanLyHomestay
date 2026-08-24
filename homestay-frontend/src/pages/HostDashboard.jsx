@@ -62,7 +62,7 @@ const HostDashboard = () => {
       setHomestays(res.data);
     } catch (err) {
       console.error(err);
-      alert('Không thể tải danh sách homestay');
+      toast.error('Không thể tải danh sách homestay');
     } finally {
       setLoading(false);
     }
@@ -125,7 +125,7 @@ const HostDashboard = () => {
       const url = res.data.startsWith('http') ? res.data : `http://localhost:8080${res.data}`;
       handleImageChange(index, url);
     } catch (err) {
-      alert('Lỗi tải ảnh lên');
+      toast.error('Lỗi tải ảnh lên');
       console.error(err);
     }
   };
@@ -194,15 +194,15 @@ const HostDashboard = () => {
 
       if (currentHomestay) {
         await hostService.updateHomestay(currentHomestay.id, dataToSubmit);
-        alert('Cập nhật thành công!');
+        toast.success('Cập nhật thành công!');
       } else {
         await hostService.createHomestay(dataToSubmit);
-        alert('Thêm mới thành công!');
+        toast.success('Thêm mới thành công!');
       }
       setShowModal(false);
       fetchHomestays();
     } catch (err) {
-      alert(err.response?.data || 'Có lỗi xảy ra');
+      toast.error(err.response?.data || 'Có lỗi xảy ra');
     }
   };
 
@@ -264,7 +264,7 @@ const HostDashboard = () => {
       setDateBookings(res.data || []);
     } catch (err) {
       console.error(err);
-      alert('Không thể tải thông tin đặt phòng cho ngày này');
+      toast.error('Không thể tải thông tin đặt phòng cho ngày này');
     }
   };
 
